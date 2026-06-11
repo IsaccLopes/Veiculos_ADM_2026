@@ -1,0 +1,3910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADM | Reserva de Veículos</title>
+
+  <!--
+    ==========================================================
+    SISTEMA ADM - RESERVA DE VEÍCULOS + PORTARIA + CHECKLIST
+    ==========================================================
+
+    COMO LIGAR NO SUPABASE:
+    1) Crie seu projeto no Supabase.
+    2) Crie as tabelas sugeridas no final deste arquivo.
+    3) Copie a URL e a ANON KEY do Supabase.
+    4) Substitua em SUPABASE_URL e SUPABASE_ANON_KEY no JavaScript.
+    5) Troque USE_SUPABASE para true.
+
+    Enquanto USE_SUPABASE = false, o app funciona com localStorage
+    para você testar visual, fluxo e telas sem banco.
+  -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --adm-blue: #002b7f;
+      --adm-blue-2: #001d57;
+      --adm-blue-3: #073b9a;
+      --adm-green: #76bc21;
+      --adm-green-2: #58a915;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #08245c;
+      --muted: #6b7280;
+      --border: #dfe7f3;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --success: #16a34a;
+      --shadow: 0 18px 45px rgba(0, 43, 127, .12);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 15%, rgba(118, 188, 33, .08), transparent 28%),
+        radial-gradient(circle at 86% 18%, rgba(0, 43, 127, .09), transparent 26%),
+        linear-gradient(135deg, #f7faff 0%, #eef4fb 100%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: auto auto -160px -160px;
+      width: 520px;
+      height: 520px;
+      border: 55px solid rgba(0, 43, 127, .035);
+      border-radius: 42% 58% 50% 50%;
+      transform: rotate(-18deg);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: "ADM";
+      position: fixed;
+      right: -30px;
+      bottom: 30px;
+      font-weight: 900;
+      font-size: clamp(90px, 18vw, 260px);
+      color: rgba(0, 43, 127, .035);
+      letter-spacing: -12px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 108px;
+      background: linear-gradient(120deg, var(--adm-blue-2), var(--adm-blue));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(18px, 4vw, 56px);
+      box-shadow: 0 10px 28px rgba(0, 43, 127, .20);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      overflow: hidden;
+    }
+
+    .topbar::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 5px;
+      background: var(--adm-green);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      min-width: 0;
+    }
+
+    .adm-logo {
+      display: flex;
+      align-items: center;
+      min-width: 190px;
+    }
+
+    .adm-logo-img {
+      width: clamp(150px, 18vw, 215px);
+      height: auto;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.08));
+    }
+
+    .divider {
+      width: 2px;
+      height: 46px;
+      background: rgba(255,255,255,.25);
+    }
+
+    .module-title {
+      font-size: clamp(18px, 2.5vw, 30px);
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 700;
+      min-width: 0;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 8px 12px;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fff, #dbeafe);
+      color: var(--adm-blue);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,.5);
+    }
+
+    .logout-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font-size: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.20);
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,255,255,.22);
+    }
+
+    .container {
+      width: min(1180px, calc(100% - 32px));
+      margin: 32px auto;
+    }
+
+    .screen {
+      display: none;
+      animation: show .22s ease both;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes show {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .welcome-card, .login-card, .panel, .form-card, .metric-card {
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(223,231,243,.88);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .welcome-card {
+      min-height: 420px;
+      padding: clamp(28px, 5vw, 62px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shield-watermark {
+      position: absolute;
+      right: -20px;
+      bottom: -35px;
+      width: 260px;
+      height: 310px;
+      opacity: .045;
+      background: var(--adm-blue);
+      clip-path: polygon(50% 0%, 92% 16%, 92% 56%, 50% 100%, 8% 56%, 8% 16%);
+    }
+
+    .eyebrow {
+      color: var(--adm-green-2);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(30px, 4.5vw, 54px);
+      color: var(--adm-blue);
+      line-height: 1.05;
+      letter-spacing: -1.5px;
+      max-width: 780px;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-top: 14px;
+      max-width: 670px;
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 30px;
+    }
+
+    .btn {
+      min-height: 52px;
+      border-radius: 15px;
+      padding: 0 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-weight: 850;
+      transition: .18s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--adm-blue), var(--adm-blue-2));
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(0,43,127,.22);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(0,43,127,.28);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--adm-blue);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--adm-blue);
+      transform: translateY(-1px);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, var(--adm-green), #55a814);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .quick-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .quick-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--adm-blue);
+    }
+
+    .quick-option {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      text-align: left;
+      color: var(--adm-blue);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 850;
+      box-shadow: 0 10px 22px rgba(0,43,127,.06);
+    }
+
+    .quick-option:hover {
+      border-color: var(--adm-green);
+      transform: translateY(-1px);
+    }
+
+    .icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: #edf4ff;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+    }
+
+    .login-wrap {
+      min-height: calc(100vh - 108px - 64px);
+      display: grid;
+      place-items: center;
+    }
+
+    .login-card {
+      width: min(440px, 100%);
+      padding: 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% -10%, rgba(118,188,33,.15), transparent 40%);
+      pointer-events: none;
+    }
+
+    .login-icon {
+      width: 82px;
+      height: 82px;
+      border-radius: 28px;
+      background: #edf4ff;
+      color: var(--adm-blue);
+      display: grid;
+      place-items: center;
+      font-size: 40px;
+      margin: 0 auto 18px;
+      position: relative;
+    }
+
+    .login-card h2 {
+      font-size: 28px;
+      color: var(--adm-blue);
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .login-card p {
+      color: var(--muted);
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    .field {
+      text-align: left;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 850;
+      color: var(--adm-blue);
+      margin-bottom: 8px;
+    }
+
+    .input, .select, .textarea {
+      width: 100%;
+      min-height: 50px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 0 14px;
+      background: #fff;
+      color: #111827;
+      outline: none;
+      transition: .16s ease;
+    }
+
+    .textarea {
+      min-height: 96px;
+      padding: 14px;
+      resize: vertical;
+    }
+
+    .input:focus, .select:focus, .textarea:focus {
+      border-color: var(--adm-blue);
+      box-shadow: 0 0 0 4px rgba(0,43,127,.08);
+    }
+
+    .password-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .password-row .input {
+      flex: 1;
+    }
+
+    .toggle-pass {
+      width: 52px;
+      border-radius: 13px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--adm-blue);
+      font-size: 18px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-header h2 {
+      font-size: clamp(26px, 3.5vw, 42px);
+      color: var(--adm-blue);
+      letter-spacing: -1px;
+    }
+
+    .dashboard-header p {
+      color: var(--muted);
+      margin-top: 7px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .metric-card {
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .metric-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: #edf4ff;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 950;
+      color: var(--adm-blue);
+      line-height: 1;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+      margin-top: 5px;
+    }
+
+    .panel {
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .tab {
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--adm-blue);
+      border: 1px solid var(--border);
+      font-weight: 850;
+    }
+
+    .tab.active {
+      background: var(--adm-blue);
+      color: #fff;
+      border-color: var(--adm-blue);
+    }
+
+    .form-card {
+      padding: clamp(20px, 3vw, 32px);
+      margin-bottom: 20px;
+    }
+
+    .form-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .form-title h3 {
+      font-size: 24px;
+      color: var(--adm-blue);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      background: #edf4ff;
+      color: var(--adm-blue);
+      white-space: nowrap;
+    }
+
+    .badge.success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge.warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge.danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 10px 0 18px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      font-weight: 750;
+      color: #18376f;
+    }
+
+    .check-item input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--adm-green);
+    }
+
+
+
+
+
+    .photo-preview {
+      margin-top: 12px;
+      width: 100%;
+      min-height: 140px;
+      border-radius: 18px;
+      border: 1px dashed var(--border);
+      background: #f8fbff;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-weight: 800;
+      text-align: center;
+      padding: 14px;
+    }
+
+    .photo-preview img {
+      width: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .signature-wrap {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .signature-canvas {
+      width: 100%;
+      height: 190px;
+      display: block;
+      touch-action: none;
+      background:
+        linear-gradient(#fff, #fff),
+        repeating-linear-gradient(0deg, transparent 0, transparent 31px, rgba(0,43,127,.05) 32px);
+    }
+
+    .signature-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      background: #f8fbff;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .pending-user-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-left: 6px solid var(--warning);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 10px 24px rgba(0,43,127,.06);
+    }
+
+    .cancel-note {
+      background: #fff7f7;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .availability-box {
+      margin-top: 10px;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-weight: 850;
+      line-height: 1.45;
+      border: 1px solid var(--border);
+      background: #f8fbff;
+      color: var(--adm-blue);
+    }
+
+    .availability-box.ok {
+      background: #dcfce7;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .availability-box.busy {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .availability-box.warn {
+      background: #fef3c7;
+      border-color: #fde68a;
+      color: #92400e;
+    }
+
+    .gate-alert {
+      background: linear-gradient(135deg, #991b1b, #dc2626);
+      color: #fff;
+      border-radius: 22px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 18px 40px rgba(220,38,38,.25);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border: 2px solid rgba(255,255,255,.22);
+    }
+
+    .gate-alert.active {
+      display: flex;
+      animation: dangerPulse .8s infinite alternate;
+    }
+
+    .gate-alert strong {
+      font-size: 18px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .gate-alert small {
+      opacity: .94;
+      line-height: 1.4;
+    }
+
+    .sound-toggle {
+      background: rgba(255,255,255,.16);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.30);
+      border-radius: 14px;
+      min-height: 42px;
+      padding: 0 14px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .status-card.overdue {
+      border-left-color: var(--danger);
+      background: #fff7f7;
+      animation: softBlink .9s infinite alternate;
+    }
+
+    @keyframes dangerPulse {
+      from { transform: scale(1); filter: brightness(1); }
+      to { transform: scale(1.01); filter: brightness(1.12); }
+    }
+
+    @keyframes softBlink {
+      from { box-shadow: 0 10px 24px rgba(220,38,38,.08); }
+      to { box-shadow: 0 12px 30px rgba(220,38,38,.28); }
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .profile-line {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .danger-zone {
+      background: #fff7f7;
+      border: 1px solid #fecaca;
+      border-radius: 16px;
+      padding: 14px;
+      color: #991b1b;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .security-note {
+      background: linear-gradient(135deg, rgba(0,43,127,.07), rgba(118,188,33,.10));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+      color: #18376f;
+      font-size: 14px;
+      line-height: 1.45;
+      margin-bottom: 16px;
+    }
+
+    .manager-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .manager-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .manager-card strong {
+      color: var(--adm-blue);
+    }
+
+    .manager-card small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+    }
+
+    .table-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      width: min(420px, 100%);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+    }
+
+    th, td {
+      padding: 15px 14px;
+      text-align: left;
+      border-bottom: 1px solid #edf1f7;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f6f9ff;
+      color: var(--adm-blue);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    td {
+      color: #1f2937;
+      font-size: 14px;
+    }
+
+    tr:hover td {
+      background: #fbfdff;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      min-height: 34px;
+      border-radius: 10px;
+      padding: 0 11px;
+      font-weight: 850;
+      color: var(--adm-blue);
+      background: #edf4ff;
+      border: 1px solid #d9e7ff;
+      white-space: nowrap;
+    }
+
+    .mini-btn.green {
+      color: #166534;
+      background: #dcfce7;
+      border-color: #bbf7d0;
+    }
+
+    .mini-btn.red {
+      color: #991b1b;
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+
+    .mini-btn.dark {
+      color: #fff;
+      background: var(--adm-blue);
+      border-color: var(--adm-blue);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 18px;
+    }
+
+    .status-board {
+      display: grid;
+      gap: 12px;
+    }
+
+    .status-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-left: 6px solid var(--adm-green);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      box-shadow: 0 10px 24px rgba(0,43,127,.06);
+    }
+
+    .status-card.warn {
+      border-left-color: var(--warning);
+    }
+
+    .status-card.out {
+      border-left-color: var(--adm-blue);
+    }
+
+    .status-title {
+      font-weight: 950;
+      color: var(--adm-blue);
+      margin-bottom: 5px;
+    }
+
+    .status-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 18, 58, .54);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-box {
+      width: min(720px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.25);
+      padding: 24px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+    }
+
+    .modal-head h3 {
+      color: var(--adm-blue);
+      font-size: 24px;
+    }
+
+    .close-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: #f3f6fb;
+      color: var(--adm-blue);
+      font-size: 20px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 80;
+      background: var(--adm-blue);
+      color: #fff;
+      padding: 14px 16px;
+      border-radius: 16px;
+      box-shadow: 0 18px 45px rgba(0,43,127,.25);
+      transform: translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .18s ease;
+      max-width: 360px;
+      font-weight: 800;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .empty {
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      background: #fbfdff;
+    }
+
+    .footer-sign {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 2;
+      background: rgba(255,255,255,.78);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      color: var(--adm-blue);
+      font-weight: 900;
+      box-shadow: 0 10px 22px rgba(0,43,127,.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid, .split, .grid-3, .admin-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .topbar {
+        height: auto;
+        min-height: 92px;
+        padding-top: 18px;
+        padding-bottom: 18px;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .brand {
+        gap: 12px;
+      }
+
+      .divider {
+        display: none;
+      }
+
+      .user-area {
+        align-self: center;
+      }
+
+      .user-pill span {
+        display: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        flex-wrap: wrap;
+      }
+
+      .module-title {
+        width: 100%;
+        order: 3;
+        margin-left: 0;
+        font-size: 18px;
+      }
+
+      .brand {
+        flex-wrap: wrap;
+      }
+
+      .adm-logo {
+        min-width: 150px;
+      }
+
+      .adm-logo-img {
+        width: 150px;
+      }
+
+      .container {
+        width: min(100% - 22px, 1180px);
+        margin: 18px auto 84px;
+      }
+
+      .welcome-card {
+        padding: 28px 20px;
+        min-height: 360px;
+      }
+
+      .quick-card {
+        padding: 18px;
+      }
+
+      .metrics, .grid-2, .checklist, .manager-list {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-header {
+        display: block;
+      }
+
+      .dashboard-header .actions {
+        margin-top: 16px;
+      }
+
+      .form-title {
+        display: block;
+      }
+
+      .form-title .badge {
+        margin-top: 10px;
+      }
+
+      .footer-sign {
+        left: 16px;
+        right: 16px;
+        justify-content: center;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    @media print {
+      .topbar, .actions, .tabs, .table-tools, .footer-sign, .logout-btn, .mini-btn, .toast {
+        display: none !important;
+      }
+      body {
+        background: white;
+      }
+      .container {
+        width: 100%;
+        margin: 0;
+      }
+      .panel, .form-card, .welcome-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="adm-logo" aria-label="ADM">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANIAAAA5CAYAAABDGnUDAAAnv0lEQVR4nO2dd5xeVbX3v2vv85SZyUx6Iwk9BQwlBKQTOoTQCYLSpClFsCCX+3o/3lf0evVyRa8UEREFQwmoSBEBKUZBgvTQAgQIEkp6CGEyM89z9l7vH3uf8zyTxkyYoJ/7zuJzeDLPc84+e++z115r/VY5oqr0Ui/10scj84/uQC/10v8G6mWkXuqlHqBeRuqlXuoB6mWkXuqlHqBeRuqlXuoB6mWkXuqlHqBeRuqlXuoB6mWkXuqlHqBeRuqlXuoB6mWkXuqlHqBeRuqlXuoB6mWkXuqlHqDkH92BsYefr+WmKv0Gd1Bu7sB7xTtQHOABBRRBUR+/Vw1fI/EI/zaGsDWIRYzFiAEjsQ0fz1JEFINBRMAKIgZVRR3YJKXqLPdefLOs2teu0ri9f6SCIAqIhF6KoMCLfzp/vdtdlSYcdKWqB1XB2mycAurDzKnDe0XVE2KTFVWl6jxzHr6wx/qxKo3Z8/sqGFQUxGJNAZMkKMJL95/TY/cdvfsPVIxFjGBEwrMWsNZSSR2vPrT2ud5yt+/qxG1HIx4WLf6AB28742P1S/4R0d/7f+skHTt+CYOGVSiVPGoM4sHj8XFhoB4l9k0DM5HxT633YbFC5CdFRBAjIBYjgUmynxXFoKjUrqdu+gSwFgoleOqBIdxw7i3dmtzvXfOoTpk0moZiUutSfQsKldQz++VFfPOHD/DSQ19ar4c39sDL9Offm8rIoU1kj09WuU/40DoGIs6f4p1SSR0ffFDl6RcX8Nhz7/HcK+/y/N1nfuxFfuMds3THbUdlLB2eRzxUwTnHw0+9y5nHjl/ve51wwW36pZN2o39LMTCQdJ5rEcE5z7Tbn+M/vrr3aveZuP/39DvfmMq89xzL2qqMGlxm0ZKFfOW03de7T58YI0388hd0h0lvM2bL5RRLhtaOAtWOAupAxGPQujWneI1SJO9f50/JZq7+dwnsEpjH5KvLxJYla0OITBSO8CyCdBNN0JJnwex+/HDqbV2e2G9d+bB+4wu70dZexaUeYw2JNUjsovNKmnpEoFRKmPf2csaNHrReD+6blz6o3zh3LyqpI616rDUUkjotXes+Vr2DAqoYKyTWYG24bmW748G/vcNv732eaZcctl79uuC79+q3L9iPasWhGp6niXPgPRgjFAtBE5j1xnJ2Gjug2/c55uwb9ZrvH4NEKWuswVqJzw+8Ks55vPe0V5Xjzp/OI9M7S5u7Hpqjs19dxI47bM5rby7nhdlvscuOm/LkU3P54b8fuF5j3+A20r4Xn6Jff2hvPfqM59hszPtU0wIfflhAq5CIwyYOYx1iPeSHIlYRA2IBSxDbFsQaxEYxbgAbvg/nKBhQA94oXjwqHi8ONQ5vHF4cHhe+Nx5nPFVxtUMdTg3vvFvo1jinTBoNKI0NBZqaSjQ2FCiWLKVSQqlUoLFcoE9TkabGAomB4cOa+cy5v16vXcyrYK2hXExobCjQ2FCgoZzQUE4ol8JRKiWU49/Zb43lcH5DY4FyKSGJzOe9UiwYpuw5ip9+62CeeXmhfv17D3S7b5tuPICGYkJTQxhnU2ORpsYifRqLNDcVaSgnCEK16hi/aTMXXvKnbt/jlKk70lBKaGws0dSnSFNDkYZygYaGAo2NBRrLYeylYkJLU5EdtxrR6fqDTr5WxRuemb2QLYeXKCbKwfuM5ac3PMUeO23W3e7ktMEYaeyZp+oFM3bRA496gj59V+A7CviOBPWKaoqKQ00VwQezBrAYLAYTPxOxJPl/FqsJxhtEDeINooKoYLxgNByignhFVBGv4MOnuHioht3Me9R5cNl5HrwPdoXzzJ3T1OWxTj71Bh272UCsMVgT7BVjJNhoSOB5EyRAIbEUCpbmpgKHHTR+vea2WCigGqSoiWpTsMUyewxMFMgmfm9EMMZgjGCNif8Of4e+hXaKBWHsJv35ztf25vcPv67bHHhplxf70MHNiECSBEY31gSzJfYPwEe7saPimbz3lt0a9zFn3aB77LQZhUQoJIaCtVgbxyPZGMO8GyOUSpbNRvXv1EZTn0ZKifLuwsW0NDUxboshvPLyQlYua6Xq1l872yCMdPgVU/Soz79An6YqbW19MGkBdR7vPC6zfeJiN5GRTPy/ZOwkCYYEIwmWJLKWRbCBkYgMVa/xaWgzgBEe1CNeUe/xPsVpio+H+ireV/E+RSMT4UDwVFas5PHLf9FlEX/05O0oFyUAFj4AIxI7Vb+ws8WthAV10G6bMG7/K7r99IqJBPsnWpGqQao4DWBCoIzJ4kJGOhmYoQ/h+myhZ7COtQYU9ttpY2675lROvuC3XerjsMHN4c6rzJzGfmnUvm3cVLYfO4SpZ3VdKp958iSaG20co8Z5zcbY6Y6ICZvKVlsO7NTG63Peo++AJrbfdiQ3/n4Wl189k0KD4YhDx/Dsi/O62pXVqMcZ6bx7J+mEXf9OIbGIS/BARZSqOBwOJUV92PWdV7wKSoIXQ9UK1YIhLRjSoqFaFNKiwRWFtBS+S4uCK1h8weALFpdYXCI4K3gjeBGcVVJD3aFUrKMqVUg7MBnzaIZoebwGZhJS3nm92K0xH7b/WNLUU0093iv4IGGzhRweds3grlY91Yqjf98iZ504sdtzLGjY2esZI7OLMuNbMkM/sw1ztosbTfi313h4Rb2gGqVolKwjh/ThyosPZ8oZt3zkgh/Y0ljXR8k3uQx4QMDYmq3UpzHh2CO379KYDz/7Vt1zwjDS1FFNFefJWmXVjkkGPiAMGdRZs5h1/9fkX793C+cevxOPv/B3nv77Avr3b2D3icP43kX7rTfY0GPw98SzTteDT5jD4CFtuGozRhWfbYLR8EQDqC0GpFBF1NPaVqZ1mWPJwjLvLy3jKg1xEaSoBBTOxGswikiAxA2CqAnMgItSBXAEqedBnEFUcdYhAgXvMdUyDVssZ4tPfYg4E+wq8RgxeAXRKnNmjezyuM//9v166f/Zj2rqgLiQTW2LDGCDdtoxRUAjg51w6DbdnmvBB8mbQesoRkx+j+xzTUCS5lJL8b6uUxqZPmNAE4S0WkNilBsuPYojTr9F77j2uDUutomTr9bf/eKkvIegqKk5KJRs15Z8+/aqHLb35kw+6Sa9Z9rn1rmIjz1gHKWCRdXjOoOt5KIuti8ZjKdKU1OZT036sb745y/nlzx081dk58N/ogcdMI5txo3g0SfmcOXFh38sxLJHGGnHs0/Tk854mTbxuLSMSoqL+58QtCyPRzwUE4+rVnltVgtPzhzLy7+4doP5M9ZGu3xjqm6+VStew64pEg14lI5W+MsPf9PlPp189HgEjeiXYqPN0Qm57wQ/x3Vkgpzo37+R4798i07/8ZoX6Jook25133SSQNnmpaqdsdCoeoZPD6bWjkS0U6KdISJotmmJ0Nho+MoXd1trnwa1lOnXXMpVONDcjxbvHuYlzolzntQp5aLh6CmfWud4Jx7yE73tmpNj30wwC4wg4QYIkm8aGozHnHkbG4r07VNerc2/3dlz/izoAUaacMbZ+pkz30ALFqmWMXiqAhIdp0qwiYpOWL4g4bFHBnP/j+4QdgfO7IERrAdtOX4hYqt4KeawqSAYm7Lo7QFdbme/E6fpzZdNxSQGo/XqRrBhaou5DqUnSC2hxmR77Tq6W/23EfJFFe8zNS4sotRpDjLMfHoec99ZEZ9AtEeNUC4mDO7fxBabDKBvn3I02CW34er3dmNqRvzuE0Zw4X89rP990Z6rLcKBg4o0NQgu2oiZTy8jiWPOXBRxJuioOPb49Ci2Ofin+vy9Z61xcX/22B0ZNbwxawibezYy1S6qrnXeDVXBa0BRBw1sXEOrPUsfi5HGnnmmHvulVxBjqFbKwaNuBOsDBuclRUhJ1PDwPRtx73fvEI7poZ5/DNp03Aq0aqNk8Gg0tJ1xzHml64w0affN6ddcJAiguJMT7Q2IUQUaVbvarmky1Sv6wXbbfqNu9d8aU7dIaxzqvZKmDgEKBctPr3+UaZd/dq077zYHXq5nfvbTnHzM9jSWLV4VQ9CQA0gSQIHsLsbAhad9mq33+5G+9OBXO7U7cFAZRPCpi4ytCCZeF3W5TvptaN8aYfORLRx98FZr7uO+l+qdN5yN82FTthGRg86qq/qaCpBJZVXo05AwfFjDR8zox6ePBTYceMLrNBY9JjWopEH9FQ0PWhOsK7DgjWb+bbcn5N7v3vGJq3Broh3OO1GbywSoXILik3iDiOLahTdfHPiRbWR0yN7h4TvnIxwdETRVnPd4Vf767HzmvbcS5zJMTOt2UI+qMnrj/kw6+bouo1c5SrWWGXVRCqber7Od5/94npx/6s7yubOn8+rcZajXAAD5mtM72wDS1NPekdKvX4H9Jo1bra2B/VsQIrxNcEPE3q4GBgAYCVLVRKfw4Qev3ibAnnuOZpNhDXRUUlyqmZciHjUplKOOOY6SjUEYOrx5nfPQE7TejHTizUfpyKEdmI4ianwEAoQEi/iEIoYXnhnMT46f8U/BQBmN334ZHW2FYFyj2ACkY1AWvNWf1277SZf6e+Q5N+v4LfrinKNaVZwLsYCZSwqFNFV+/dvnuOfPbwKgajKYBJCofgS9/ysn79nlMfgs1nBtrBe/r7h1M1JGf7jxFLng4ntZsKQtt/HCgtR8YaoPi7KtI2XKPqurooMH9c/75b3gvMV5G/sTpLL3IeIgRD0E20t98Oltu+UgTvn66lD4kQd+ikrFYa3NpXDOLNlwc7usHuSRXPIPGvhPykg7f/2Lus12i3BtFiXFx4BQo+AUjK3yzBN9ueWc3/5TMRHAxlsuw7WHgFYhOHGD9VvhxZnDu9zOSUdsj43GbpBAgZlchMAFaG2rMOOxt5h+z2ygHjEzGAksHAAn4YDdN2b8IVd1SSp57zvZXVlMXW5wx/PSLjISwH03nSTX3fpksHEyeysNY/I+qnbx+41H9GPrfb/Tqa/DhjQHyQxhPZug3tUveq2fA+8RF3YeH319x07ZtlOfjjj9F7rduGEgQhKd3Tmkn9lIkXkzAZ0BEmKCpDMiDB3ct8vzsL60Xoy01wFv0dHhcA5Sn+K9Q9WTGkeh0M6bz7Uw/Utdj1P7pGi380/ScmOaLxT1gk8F5z3LFic8ctkNXerzhIMu1d0mjiL1Gv0tJkSe57ZPeLIPP/EWs/98ljw6/XiZM29Fjoit6SgXLYfvv2Y7YVXyzgcJGFU4vOKdr9kMnRDDrtM3v7yPvPn2+3m8mnOaH1lj1ggD+zaw8YjOKvBGQ5o6q4R1Y8v8Z/VuEBXBEyW4QnvVM2HrEexz3M/zXp98/K4M7NtAoWAwtjbPmRM2gxmQEKgsdfez0f4SgZHD+3VvItaDus1Ix/zgaG0Zsoy0WsCpw0Wx7xWqWmXpm/DTU+/6p2MigM12XBJ9RSECWqvgqqDawYJuhATtuesW9G0q5aEoNjJT0PkDyuU8/Pz2F/Jr7nn0dawJoS3WBj+NGOoQM2Hf3Tbr0v3V+8g4dWZStLfy2F3IjfLu0JPPvIX6zFmutWj8CLFbA81NBTbZvLP0HtS/lEPPEM6rd0TnMHvmHjCSnYRImJdB/cscc1iQSlNOnaaH7zOGbFfIXHPBNtRONmL9faDefgx/Dx/YyFa7/3c3t5XuUbdQuy2nfl4/c9HfafcJ4j1OFPEB4xFVCmnKA7eO4T+PWPP12516rg4YtZxBI9vo27eDpJhSbqhSaqySJMHzpD5TBySkVRB3M+MRhcQXEG9IylVeeraJ2855oMurZbNxS1AnqHpwElI3nMOq4bXnN+7yPEzeZ3xNmojkC1dMQKi8V154433u/emxed8eeWQuZ0/dnr7FAhB2eaGGaKlXth87mF2P+rnO/N1H5caEyIbO68XUgIx4dYa4dYdmzprHUYeMj+ppCHYK/ppgA9tEUK8MH1JTl3Y55iq9/eqTcttK8kVfU+0++LCD1+YuYYdtNsIYg4XcVpI6Z/JRB4xj7yOv0NNO2RMrQjX1GPWYPMCW2B+Y8+YyFi5byV4TR0UNL0hpk8X1RZusXEooN6/uS+pJ6hYjbbfH+zQUPSvbLJAGxxiQIvRJ2pj9eD8ev7GzenTARafqdrsuYcCIVj771Ur4MpUAlauSqsej4INDE6uADwwFaHwYXqIHPzNoXbFbTHTstZN1wo6eSqtE3xYhbs94Ku838Pi107rU1vZHXKYP33R2XGKa6+yZWmNMWBSPzZrHdqNrUPqrryxm/uJWWpr6AUGCZ0zoo93Q3FTg0APX7ZyEsKuv8kVYiA6CAzXwkjXdZ6Q5f19K1Xls7tj1eayeSFikXmBA35oE32zEAMqlJPxGHfwc7R/vlUVLWvmvqx/lsosnM2RgEzYyHdAJ4Bg+uJkvnbsfO287EoUYoV4DGTKwwiaWu+57nvcWt7LXDiPj75ozFEh0ByjFYkLzgD7dnovuULdmevTWy6i2lrF4LMHnIM5g0pSFc5u5/qt/EoBPn36KnnzNUfrtRybpgce/wuBR74OkpB1C2hHQrIpTqupRfIChE4dJPCZxmEQxBcUWFJOElAqiW9FriN6e81LXJ2bLz35Jt952KdX2JCzCqIKpCYv5uae77sc563P7kFg6wcRQ0/UVpZp6Hv3b3E7XvfrwOfLGm0vzMfg61cl7SJ3iHJx42EczkjU25uCQA1WdgzfDwjPrwUgrVrQGtRfyANNg25E7ZkWgWKylmWwyciDFQhJUtjxSImgVzmXpmcKsmW9y532vhJhE9dFFUFNFs/4fte9YNhrcpy6iu85JbAJTL1i0gjvueJ603VNxGhmMVZDMcFUhsQwb+E/CSEf911RtaqkgamNaQEyYU4+o4ZG/hN33K7fuo4ef/iqjJyxAEkd7u1CtVHFpFbSCp4IzFdRWQRwYD1JLpZA4ebm9YcBaxcb0cFTxaYFbv3hvl6XR7vu/TYM1JFpA8vQBCwlU2krc9Z2uhQSNmfR9PW7yGFKf+Vdi1HV8kM55vFM+bKvy6NNvrXb9fTNejef4qHbUwcsROBg6uInPf/2uderzSSEhsSYPRcqWbh5j19WJWRP5DFkMEshaIUlqUjDLQK4PPRq96UBKRRMd0uTRIpk6aMTw/ooKrz5zoVx+/RO8Pf8D0tRHQMPnUiscYSzEjSkGiOSbFBoAnhl/m8sj954n7y77kBUfdlBNXdRiQt9zVQ+lkAhDB23Y6IYuM9JW2y0DIxijwdjTWPvAeFJRRu/YxoX37aX9Nm6lArgODakKOLwoKlnWa0j3Nhr8N1YtRhPQkCJhNaZRaBLqKmQ+FwOgVD8ocffPu2aUA3z6nNN0m/HL0GpjaFOzthNKifD6i10PUD1o7/GUi5YkM5gholq1xVBJHb9/aDZzHly9XsA9D7/E8tZqWBQRxcozSY1QsMH3cdyh685TShJbJ31qoUY1tC4LS+o+SxXKxRpDSIjWtjYslFprQltHNf9rxEYtNYmR+XrCadFuhDfeXgbAC/efJXfd/wpGIvRPDf7uvLEERnCZ9I6blPPK8hVt3PDbxwGY+9ZiPviwnTSXfHkXc19bYoVNN+rX7bnoDnWJkfa+8DQdOKwDsAGliqnc2e5kCp7Nxy2j1NJBqiYoYdExhzOIU6x3FJRwOEhSKKRCITUUU0sptRSqlqSakFQSChVLoWIoOWiyVfqitC0scff1o3hm2k1dlkb7nfAqFXHgJJZSiblOBcV0FHj24U27PFn77TUWVSVJ6tC6PFU9UFtblR9eN3ON17/y4NfkzzPn4n1mx9QWbD3yt824wew05cq1ckFIwusccaNat9DjP5xzXR5bRhsN60eSmFwdy5uUuu4oLF7Wmv85sF9DvvhzWNr7YN+K4oFX5s7Pz//1bx5n/tLWPAESfG1ziTfIItwlprmkXkkjJH/XA7P5w/WhvsRTvz9P2tor4YrcMZvxUVafQ9hk1Ib1JXWJkTYd/yFeEqwkOVIVFlFErjCgAmpqu6JIPrlODV7Ai6Bq8WLBJqgUSDUh9ZbUGZwzqBPEG/AWqSR8sLgvLz4zilunfYpLD39UXpw+vctM9Llp+2mxWMVXDR6HE0cWYl+wKc/PGsQrd36/a76jQy7X3XfYOEikmJUpVqKqmM0HPDt7PrPuWHtk8f0PPYv3Lkj1qNaSpYtEZho+uJFddt18rX3RTlxT7+iNf8dP59fKi2ulrbYYWgswzduPKRVRlVVg0fz389/7NBZrfdCgTnmv+FRJqwE4mvfukvz8R+85X2698xnSKMlDfY21jjZv2zll/uJWfnbD453OaGuvBKQuk8ydZGdgqaGDNqyN1CXUbsTmK6hWY+4Otc4FbTTwkMkmWsPv3inqDEnRUSo62trLLHyniUVvt7BsXj8+WNRCa1uJl3/3n11jjFO7N7CjLztYx01cgW8vkkoIYbKR2cV6Fr7Vwk3n/a7LTHncMbvQv7lA6gLIYk0M37cgGlIO1AvzFq7kwON+paU+AVo3Jp4bg3k3HtFI68oqfevg2Ey1yxYqqhxz8NrVu8yAz3mnzs5a49/doF0mbkJiDS7aNz5GOviIt/vUs7y1whtvLAbg01Ou0Nt+eUoNZVWfq1WZ60JVWbR4Raf7/PTaGRy81xg2HjmAJEalG2NiWE+9qLWYyJzGCH/625s8uspG1dZWpZDYHHDIgBLipwD9WjasjfSRjLTXRZ/XyZ9diVZNnv+RHxJCUKxKEEix094pokKhVGXRu3147vGN+MslN3Z50X5cOug/jtCd9p5P2tEA4vE2MFEo0+WgTXjgjs3gyK63efrUbXHe4ZxSwICJsV/RCSliUIEj9x/DwZPGYEWiTVjnTCSAJsWkFjdW5w3Cq1KN0du7bjucHT9ztT556xdXm7c0dZ2kkEItxZ76Pbl7jHTQaTfpTf9zDDaPrg6xgLgsr8njnOO9RSt4cHpQrUYMbqKlqRSCxOoYu35kqfcsXdze6V6vzvx3+cFVM/RLp+0ZVVDBWmKKuMZ7h8aMNRijtHU4brvzBU6fun2ntpYsayOxQiWzkzSb71qeVkufMjtP+Zn+7e4vbJB1+JGq3djtliDGIbEiT9g+qeWpSE3VEwOJVfqUE957vR+/uexTXDH1T/JJMtEJl0/WHXZZSKWtCe+U1PuAEKXQ4TwFVvDsjP48+8ufdblPp/7LbTqwuRgfTK3MF9DJcy8CfcoJA/tY+jYa+sWjpUFoLgt9yoaGUhJsnHB13k4Nug27uDHC54+csMb++DQlTTOEi7jw6AQ9C7VEuq7SRWfuSf8+hWCz2RDbZnI+D0G5Rgxz31yaXzN8eBONpST61LKogvCPDC5fsqKDD5ZUVrvfbfe8xJLl7dgs2iNORC5YfRYMHAZ6z8NvcPevTlxtUO/MX9EpwJY4lfWPqqWlzMgRXU+R6S59JCNtNGoZOPC4EAsUE/Yk7sKhUInFSxDLttrAPTduyc9Pu0een37dJ8ZAo4/6nH7tNzvpphPmB7WEWKdVwXtDh1dEP2TOU0P5zf/tXgjT5H3H4DVTP4ROmofWCnsgwcZJkuDnSeJitMbEPBobHLZWon1FnWQKlKV6q4cDd19zlR2nvrPatkq/sl24YLs+xh/f+KzuseMIqqkLyYFAYiEx5Il0qp4ksdzz8Gv5dcNG9M8dsBJtvRyOJ3TpnUUreHbGl1eb80fvPEfuvH8O1pgciexk62lIR6lUHQvfb+eaGx9ftQkA3nz3/XB+nRwWMjAn6JktDQmbbrzhAId1MtKeF5yoLX07UFcL4SCWvMpgliyprWwcKxa2cOPl2zDjfz45BgKY/N8H6eFfmU15WEq1UgKxOOtiakdAjgpJB++9MoRfnnd/t/o2fp/v6PbjhuNd0BdslMRZKeDOVn/GWL7ORonLydTVVIiJG5IhnxIeduZYNSYE+wzu38ix59y0mn6mUsc4Eh2lMcYvIGdh+TSWP7qIyx7HXqU33/2innnMNjH0zeZOV4WAAxgoJKHg5TsLP+ChGbPz64dFI16iZzgvDZYHksL8RSvXev/Lr3uMV99cljuonfOxNHUm7cPm8qeZc7nv+pPW+Ozemr+sM9yv5PGBSECPFRgyaMMl+K2TkYZt9iGJCbtjrnpkteRicSxvDKViBwvfbuaSQ++TF2+5/BNjoqMun6IXPrqT7nTAAopJEdEiNlEophjrMQYchlKSsuy9PvziCw92u2+77L4Vo4Y2Z676qEYFCeQc0X8UvPSZg7E+MlszhZ0owetqyZlOWmK2j2ehR1AuWvbfd/WIcGsC49Tn50RDLTqww2+tHWsf7qFnTNef/WaWTr/yZI4/ZGtKhRg1bYUkj9jWmJkaS4kZ4bLrZvLaIxflDQ+OoTedzKMoWTJn7PLla2ekl+4/S353/2wqVUdbR0p7xdFWSUlTn9fb82L55fSn1trGogXLa3aZxBAw9bkNnz2vgf02HCOtE2wYPnIlVWditpHWILoohQRDUVLmzWvmx4d3Pe5tfWnLKRfokG2WMGbbBQzbbAkTJqX4ahHXXqBgPc6miBoSHxLoPEpDqY15L/fn+tP+tF79O23qrlHVClWRanpdYJMIUOHXkI1aC9epwe4imu+2Jtu1pR6Bk1p6BHDoXqsn0dlM+pDViQj9MSIUEpvf+9sXHMBjz76rWTwfIhSLloZSgWsvOZKBLQW8QqXqciesgVpNCWrZv06UZ19ewI/+7ZBO8zhyWP88/g01cb+JKlZkpoWLP1znHN/866c5cI8xjN+yfw5YZYmAHaly7e2z+OO0k9f6/JYvXUlru6eYxOgOJTITuZYgKEMHb7gEv3Uy0uDB7aSV7JRa2IVRiUvDYBPLnNcGMeGkL6sBXLWAqzSgTlF1iPeIpKAuqkJV8OFNE2JdAC6iimMLAdSoKpAk9BtcYeDIFTQPWUm/QRVO/NYKkrIjbSvj0gLpigRjFJOkqHgsMaJbhCqGpoaVzH5yEDeftX5MftgXf6W/veKEkCDns6qlNu502fYSFo21kgF4cbpyPW4VqtkOwYMiINkTzzXmvHjjoH4NfP0Hf9YffH1SHcLRucXMEWEiMpDZbZuP7IvbqLlTTGDeBwnSVHL7J9qVmsXtaQ7/pamjWEy48rq/svMPj8tbGb/Pf+rdN54dJXDoVKZeegJQYK2wcMEK1kUvPnS+7HT0ND37pImMHNJMoWRBlZVtFWa9/C7f+MK6i9t/sLyN+Utb2XRYY60eRpw/nw3DK4P6dz1Vpru0Vkba6ZwT9JgzqvhqgjdZaaW4S0Esa6G0d8CuOy/B7rIUK8FgNFUbod8Kigd1Ico7FrDIQoUyZ2QeCBT9VGkE/xMTir2DJ3VCR3tCpS2iZ9GZ6VBQn9dMUwylxJM4YeadW3PPt9cfMfz8UTsGAMUG9TY4XrO0aXLV58nn3ubp596t82FkqlxN8mRR4VaUxIRrJ2wzkgnbjcy0xjxExmc6voS8qTOO6Zw56qsB/s75YxWfUXb/rCZCxrTZuTVwvGZT5PGtGRO7rC1PxXl+cM1f+dUPO5cM69OviYZyIY/4Jsszihl7zitV51i8qJWPoiduW7P9M2WvzT7y2lcf+zeZ8fTbuumwxhrQEMW8RNXaA31bSmy96yX60sx/6XHtaa2MtMm4DxALmmquypHr/USsPgaS2hR8gtOQU2QkpVa0FzwGj+CNolnVQCJzqgTGDCfm7asqFa052BQfGJoQepIXNCTugiKYxFEqKG+/2p/7f7MtL0//wXpP2M6HXqm/jrXUkvggjA3rJHVZ3QShI/VccvUMfv+L07p9rxPPnq7XXfGZsPa8D0ZxNDJCYRZBRRk+uIlDTrlJ/3B9KKLY3uGClKyLQMgWUD1D1deRy84Lb7nJyitLDenKr/PB9nPgYu27H9/wBBefs9dq4xs2uB+lQu0VNlmyYhZN5LynowpLlrevemmP09/fW84u44fXuSIc+GAzqoa4vsEDGhk4uGWD3H+tjDR8dGtYwCYrzhTMo7pNDDQLRBUccQvzMeEhdp6Y+5PVdaAuZivwVFRpCDukai0tOWgLQf/2SEhKiraaEN44EXZ9S2JTli9q4C9/3ZgHvnOTMPXjTcyeu2zOsEFNGGtypCV7PUzmrzACb727fL2YCOCGq46Xdxa26tABZbwDrx7B5OpJsG2ExMD+e26aX9fe7khTJUnq2MgrXmogwerlurKHV9fVfNGHmDbvIY2SJHXw/gdtXDptJpf96+Q1jm/kkL4UCpb6Z1KvWqpCW0eVpcvb1md6ukULFq/AGEhMHJTGV+pIWFfeQalo6b+B7KS1MtLAoWmoYS2KaN3biySUAQ5SQWvcpYHh8h1OcoiiZkmv+jiiZMo/PRBLZKkJEeYaJZfgQQXvBI9gi1AuKOKExfOaefmpYfzxkmnCwT0zMZP33yYAAzE0ppZMFw39GK5w24w32G7skPW+z/W3v8DXTpkY8qwIkdY1NC66F7yy+8RR+TXLVrSROl9Lsda6cC1W9U3V0itWfQDZhoWGiIU01pPuSJUZj8/liqse5KHfrv1laMOHtORAjNTZZ/ndBDoqKR+urK6tiR6j5cvbcqlIjLRB6vKGvccYw8ABG0YirRH+3u9fT9WmYqhNV7NGQ/mo7FWL2WdmHIfnEZgh+G2DJzy8YoXaK1c0c5NlFXwk5MCEOM78lSwmM6G84J3BpwlOLVLylBrb0I4qc2b1585f7cBlx90vf7ykaxmuXaF9j7tad9l2GB2VlEo1QLF5sfnojLZGaG1L+eMDL3+se33jCzvLitZqrcAhWaVScs4Qga23HMQ+n71GAf7w6JssX9Feg9x9rW95Xk/9v712ylb1Pqt65KhUPR0VJVVLewqPzJrPBd+6m6P330rWxUQQ0idydV/jPZTYpzCWjkpKe0f3o9C7S8uXtkY7Mz4r7+OYszkKG8+IIRsmeHWNEskWqpQbV5ImlqJXnDq8l6jDx2Lz2QPXWNCdaCBnqlkkhfx3gDyDL0Ap8SH4utezRERMg0KYOoM6g2+HpfPLLPh7f96eM4hnrt9wYUf7T9oaaxXvarfIa0mguer1/Evzmfnrz3/sfjw0cy5H7D8mt2lqIFvGSYakAGedsAsAcx78ipx+0e/0m+dNYqOhfbMekulXGhupU6Lr7lZDE72HRcvamTf/A56Z9Q53/vk1/vjLz8mBu3StfsXQIS215MJoR4r6UNSFoAwvW17hlQfP3WDPKqPHHp/LG28vZ4uRfanhmNG+j8O3Apuu8r6knqK1vvryiMuP1AEDHeIMVtKgdmpMDQ4WCyFR3KEx6NBFT0SuMQC5hy7cLqIp8bHHFRN24xqIgDiM81RWlFn81iCWvNOX526/aoM/jIx2POJKvejsfaJ6IHUhMhHyN+CqFa6e9iT33fDxGWn7Ay/XL5+9Jy3NpRjVIFEtIecq7+Hmu17g15dNze+3x6FX6WGHbcvmmw2iWKzF+2UFKrP8nMxeCbUxPG1tVd5+931ef3UpL72xhMfuXL8XEZ/7rTt1t4mbYGyCNSG9xCSS271WhJ/fOovbrzr2E3l2h552s5503A4osUCRBIVKVePr64Rf3vIkt/9s7WWc15f+IS9j7qVe+t9GPf6isV7qpf8fqZeReqmXeoB6GamXeqkHqJeReqmXeoB6GamXeqkH6P8BK1ZD7tfgdDsAAAAASUVORK5CYII=" alt="ADM" class="adm-logo-img" />
+        </div>
+        <div class="divider"></div>
+        <div class="module-title" id="moduleTitle">Segurança Patrimonial | Reserva de Veículos</div>
+      </div>
+
+      <div class="user-area" id="userArea">
+        <div class="user-pill">
+          <div class="avatar" id="avatar">I</div>
+          <span id="topUserName">Visitante</span>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Sair">↪</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- HOME -->
+      <section class="screen active" id="screen-home">
+        <div class="hero-grid">
+          <div class="welcome-card">
+            <div class="shield-watermark"></div>
+            <div class="eyebrow">Controle corporativo ADM</div>
+            <h1>Reserva de veículos com aprovação, portaria e checklist online.</h1>
+            <p class="subtitle">
+              Uma tela única para solicitar veículo, aprovar reservas, registrar saída/entrada na portaria
+              e manter o histórico completo no Supabase.
+            </p>
+            <div class="actions">
+              <button class="btn btn-primary" onclick="openScreen('screen-request')">🚗 Solicitar veículo</button>
+              <button class="btn btn-secondary" onclick="openLogin('gestor')">✅ Login gestor</button>
+              <button class="btn btn-secondary" onclick="openLogin('portaria')">🛡️ Login portaria</button>
+            </div>
+          </div>
+
+          <div class="welcome-card quick-card">
+            <div class="quick-title">Acesso rápido</div>
+            <button class="quick-option" onclick="openScreen('screen-request')">
+              <span class="icon-box">🚘</span>
+              <span>Nova solicitação</span>
+            </button>
+            <button class="quick-option" onclick="openLogin('gestor')">
+              <span class="icon-box">👔</span>
+              <span>Painel do gestor</span>
+            </button>
+            <button class="quick-option" onclick="openLogin('portaria')">
+              <span class="icon-box">🏠</span>
+              <span>Controle da portaria</span>
+            </button>
+            <button class="quick-option" onclick="openLogin('admin')">
+              <span class="icon-box">⚙️</span>
+              <span>Painel Admin</span>
+            </button>
+            <button class="quick-option" onclick="openScreen('screen-status')">
+              <span class="icon-box">📋</span>
+              <span>Consultar reservas</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOGIN -->
+      <section class="screen" id="screen-login">
+        <div class="login-wrap">
+          <div class="login-card">
+            <div class="login-icon" id="loginIcon">🔐</div>
+            <h2 id="loginTitle">Login</h2>
+            <p id="loginText">Entre para acessar o painel.</p>
+
+            <form id="loginForm">
+              <div class="field">
+                <label for="loginUser">Usuário</label>
+                <input class="input" id="loginUser" autocomplete="username" placeholder="Digite seu usuário" required />
+              </div>
+
+              <div class="field">
+                <label for="loginPassword">Senha</label>
+                <div class="password-row">
+                  <input class="input" id="loginPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha" required />
+                  <button type="button" class="toggle-pass" onclick="togglePassword()">👁</button>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" style="width:100%" type="submit">Entrar</button>
+            </form>
+
+            <div class="actions" style="justify-content:center;margin-top:18px">
+              <button class="btn btn-secondary" onclick="openScreen('screen-home')">Voltar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOLICITAÇÃO -->
+      <section class="screen" id="screen-request">
+        <div class="form-card">
+          <div class="form-title">
+            <div>
+              <h3>Solicitação de veículos</h3>
+              <p class="subtitle" style="margin-top:6px;font-size:15px">Preencha os dados para enviar para aprovação do gestor.</p>
+            </div>
+            <span class="badge warning">Pendente de aprovação</span>
+          </div>
+
+          <form id="requestForm">
+            <div class="grid-2">
+              <div class="field">
+                <label for="reqSolicitante">Solicitante</label>
+                <input class="input" id="reqSolicitante" placeholder="Nome de quem está solicitando" required />
+              </div>
+
+              <div class="field">
+                <label for="reqMotorista">Motorista</label>
+                <input class="input" id="reqMotorista" placeholder="Nome do motorista" required />
+              </div>
+
+              <div class="field">
+                <label for="reqDestino">Destino</label>
+                <input class="input" id="reqDestino" placeholder="Ex.: Cliente, fornecedor, unidade..." required />
+              </div>
+
+              <div class="field">
+                <label for="reqArea">Área / setor</label>
+                <input class="input" id="reqArea" placeholder="Ex.: ADM, Manutenção, RH..." required />
+              </div>
+
+              <div class="field">
+                <label for="reqData">Data da saída</label>
+                <input class="input" id="reqData" type="date" required onchange="checkVehicleAvailability()" />
+              </div>
+
+              <div class="field">
+                <label for="reqHora">Hora da saída</label>
+                <input class="input" id="reqHora" type="time" required onchange="checkVehicleAvailability()" />
+              </div>
+
+              <div class="field">
+                <label for="reqRetornoPrevisto">Retorno previsto</label>
+                <input class="input" id="reqRetornoPrevisto" type="datetime-local" onchange="checkVehicleAvailability()" required />
+              </div>
+
+              <div class="field">
+                <label for="reqVeiculo">Veículo</label>
+                <select class="select" id="reqVeiculo" required onchange="checkVehicleAvailability()"></select>
+                <div id="availabilityBox" class="availability-box warn">
+                  Selecione data, hora, retorno previsto e veículo para validar disponibilidade.
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="reqAprovador">Gestor responsável</label>
+                <select class="select" id="reqAprovador" required></select>
+              </div>
+
+              <div class="field">
+                <label for="reqPrioridade">Prioridade</label>
+                <select class="select" id="reqPrioridade">
+                  <option>Normal</option>
+                  <option>Alta</option>
+                  <option>Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="reqJustificativa">Justificativa / observação</label>
+              <textarea class="textarea" id="reqJustificativa" placeholder="Descreva o motivo da saída, rota ou observações importantes"></textarea>
+            </div>
+
+            <div class="actions" style="justify-content:center">
+              <button class="btn btn-primary" type="submit">📨 Enviar solicitação</button>
+              <button class="btn btn-secondary" type="button" onclick="openScreen('screen-home')">Voltar</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- CONSULTAR STATUS -->
+      <section class="screen" id="screen-status">
+        <div class="dashboard-header">
+          <div>
+            <h2>Reservas do dia</h2>
+            <p>Visão rápida para acompanhamento das solicitações e saídas.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="loadAll()">Atualizar</button>
+            <button class="btn btn-secondary" onclick="openScreen('screen-home')">Voltar</button>
+          </div>
+        </div>
+
+        <div class="metrics" id="publicMetrics"></div>
+
+        <div class="panel">
+          <div class="table-tools">
+            <strong>Últimas solicitações</strong>
+            <input class="input search-box" id="publicSearch" placeholder="Buscar por motorista, destino ou veículo..." oninput="renderPublicTable()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Motorista</th>
+                  <th>Destino</th>
+                  <th>Veículo</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="publicTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ADMIN -->
+      <section class="screen" id="screen-admin">
+        <div class="dashboard-header">
+          <div>
+            <h2>Painel Admin</h2>
+            <p>Gerencie todos os acessos: gestores, aprovadores e agentes da portaria.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-green" onclick="openUserRequestModal()">➕ Solicitar novo usuário</button>
+            <button class="btn btn-primary" onclick="loadAll()">Atualizar</button>
+            <button class="btn btn-secondary" onclick="openScreen('screen-home')">Início</button>
+          </div>
+        </div>
+
+        <div class="security-note">
+          🔒 Para auditoria correta, cada pessoa precisa entrar com usuário e senha próprios.
+          Toda aprovação, liberação de saída, checklist, retorno, cadastro e bloqueio fica marcado com quem fez.
+        </div>
+
+        <div class="panel" id="pendingUsersPanel">
+          <div class="form-title">
+            <div>
+              <h3>Solicitações de cadastro pendentes</h3>
+              <p class="subtitle" style="font-size:14px">Solicitações feitas pelos gestores para o Admin aprovar ou recusar.</p>
+            </div>
+            <span class="badge warning" id="pendingUsersCount">0 pendentes</span>
+          </div>
+          <div id="pendingUsersList"></div>
+        </div>
+
+
+        <div class="panel">
+          <div class="form-title">
+            <div>
+              <h3>Reservas ativas</h3>
+              <p class="subtitle" style="font-size:14px">Admin pode cancelar uma reserva aprovada antes da saída ou em caso de necessidade.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Motorista</th>
+                  <th>Veículo</th>
+                  <th>Destino</th>
+                  <th>Status</th>
+                  <th>Aprovado por</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="adminReservationsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-grid">
+          <div class="form-card">
+            <div class="form-title">
+              <div>
+                <h3>Novo usuário</h3>
+                <p class="subtitle" style="font-size:14px">Cadastre gestor/aprovador ou agente de portaria.</p>
+              </div>
+            </div>
+
+            <form id="adminUserForm">
+              <div class="field">
+                <label for="adminNewName">Nome completo</label>
+                <input class="input" id="adminNewName" placeholder="Ex.: João Silva" required />
+              </div>
+
+              <div class="field">
+                <label for="adminNewArea">Área da pessoa</label>
+                <input class="input" id="adminNewArea" placeholder="Ex.: Logística, ADM, RH, Portaria..." required />
+              </div>
+
+              <div class="field">
+                <label for="adminNewUser">Usuário</label>
+                <input class="input" id="adminNewUser" placeholder="Ex.: joao.silva" required />
+              </div>
+
+              <div class="field">
+                <label for="adminNewPassword">Senha inicial</label>
+                <input class="input" id="adminNewPassword" type="password" placeholder="Senha única da pessoa" required />
+              </div>
+
+              <div class="field">
+                <label for="adminNewProfile">Tipo de acesso</label>
+                <select class="select" id="adminNewProfile" onchange="toggleAdminProfileOptions()">
+                  <option value="gestor">Gestor / aprovador</option>
+                  <option value="portaria">Agente de portaria</option>
+                </select>
+              </div>
+
+              <div class="field" id="adminApproveField">
+                <label for="adminNewCanApprove">Já libera como aprovador?</label>
+                <select class="select" id="adminNewCanApprove">
+                  <option value="false">Não, deixar aguardando aprovação do admin</option>
+                  <option value="true">Sim, já pode aprovar reservas</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary" style="width:100%" type="submit">Salvar usuário</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="tabs">
+              <button class="tab active" data-admin-filter="Todos" onclick="setAdminFilter('Todos')">Todos</button>
+              <button class="tab" data-admin-filter="Admin" onclick="setAdminFilter('Admin')">Admin</button>
+              <button class="tab" data-admin-filter="Gestores" onclick="setAdminFilter('Gestores')">Gestores</button>
+              <button class="tab" data-admin-filter="Portaria" onclick="setAdminFilter('Portaria')">Portaria</button>
+              <button class="tab" data-admin-filter="Pendentes" onclick="setAdminFilter('Pendentes')">Aprovadores pendentes</button>
+              <button class="tab" data-admin-filter="Inativos" onclick="setAdminFilter('Inativos')">Inativos</button>
+            </div>
+
+            <div class="table-tools">
+              <strong>Usuários cadastrados</strong>
+              <input class="input search-box" id="adminSearch" placeholder="Buscar usuário, área ou perfil..." oninput="renderAdminUsers()" />
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Usuário</th>
+                    <th>Área</th>
+                    <th>Perfil</th>
+                    <th>Aprovação</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTable"></tbody>
+              </table>
+            </div>
+
+            <div class="danger-zone" style="margin-top:16px">
+              ⚠️ O botão “Excluir” abaixo desativa o usuário, mantendo histórico de quem aprovou ou liberou veículos.
+              Isso é melhor do que apagar, porque não perde auditoria.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GESTOR -->
+      <section class="screen" id="screen-manager">
+        <div class="dashboard-header">
+          <div>
+            <h2>Painel do gestor</h2>
+            <p>Aprove, recuse ou acompanhe reservas de veículos.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-green" onclick="openUserRequestModal()">➕ Solicitar usuário</button>
+            <button class="btn btn-primary" onclick="loadAll()">Atualizar</button>
+            <button class="btn btn-secondary" onclick="openScreen('screen-home')">Início</button>
+          </div>
+        </div>
+
+        <div class="metrics" id="managerMetrics"></div>
+
+        <div class="security-note">
+          🔒 A aprovação fica gravada com o usuário logado. O solicitante pode escolher um gestor responsável,
+          mas quem aprova de verdade é sempre a conta que entrou com senha única.
+          Na portaria aparece o nome do aprovador real, data e hora da aprovação.
+          <br><strong>Obs.:</strong> se vier de uma versão antiga, o sistema corrige as permissões locais automaticamente.
+        </div>
+
+        <div class="panel">
+          <div class="tabs">
+            <button class="tab active" data-manager-filter="Todos" onclick="setManagerFilter('Todos')">Todos</button>
+            <button class="tab" data-manager-filter="Pendente" onclick="setManagerFilter('Pendente')">Pendentes</button>
+            <button class="tab" data-manager-filter="Aprovado" onclick="setManagerFilter('Aprovado')">Aprovados</button>
+            <button class="tab" data-manager-filter="Recusado" onclick="setManagerFilter('Recusado')">Recusados</button>
+            <button class="tab" data-manager-filter="Em uso" onclick="setManagerFilter('Em uso')">Em uso</button>
+            <button class="tab" data-manager-filter="Finalizado" onclick="setManagerFilter('Finalizado')">Finalizados</button>
+          </div>
+
+          <div class="table-tools">
+            <strong>Solicitações</strong>
+            <input class="input search-box" id="managerSearch" placeholder="Buscar..." oninput="renderManager()" />
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Solicitante</th>
+                  <th>Motorista</th>
+                  <th>Destino</th>
+                  <th>Veículo</th>
+                  <th>Status</th>
+                  <th>Aprovado por</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="managerTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PORTARIA -->
+      <section class="screen" id="screen-gate">
+        <div class="dashboard-header">
+          <div>
+            <h2>Controle de portaria</h2>
+            <p>Liberação de saída, checklist do veículo e registro de retorno.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="loadAll()">Atualizar</button>
+            <button class="btn btn-secondary" onclick="openScreen('screen-home')">Início</button>
+          </div>
+        </div>
+
+        <div class="metrics" id="gateMetrics"></div>
+
+        <div class="gate-alert" id="gateAlert">
+          <div>
+            <strong id="gateAlertTitle">Atenção na portaria</strong>
+            <small id="gateAlertText">Existe uma ação pendente.</small>
+          </div>
+          <button class="sound-toggle" onclick="ackGateAlert()">🔇 Silenciar</button>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="form-title">
+              <div>
+                <h3>Veículos aguardando liberação</h3>
+                <p class="subtitle" style="font-size:14px">Clique em “Liberar saída” para preencher o checklist online.</p>
+              </div>
+            </div>
+            <div class="status-board" id="gateBoard"></div>
+          </div>
+
+          <div class="panel">
+            <div class="form-title">
+              <div>
+                <h3>Registrar retorno manual</h3>
+                <p class="subtitle" style="font-size:14px">Use quando o veículo voltar para encerrar a reserva.</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="returnReservation">Reserva em uso</label>
+              <select class="select" id="returnReservation"></select>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label for="returnKm">KM retorno</label>
+                <input class="input" id="returnKm" type="number" min="0" placeholder="Ex.: 15000" />
+              </div>
+              <div class="field">
+                <label for="returnFuel">Combustível retorno</label>
+                <select class="select" id="returnFuel">
+                  <option>Cheio</option>
+                  <option>3/4</option>
+                  <option>1/2</option>
+                  <option>1/4</option>
+                  <option>Reserva</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="returnObs">Observação do retorno</label>
+              <textarea class="textarea" id="returnObs" placeholder="Ex.: veículo voltou sem avarias"></textarea>
+            </div>
+
+            <button class="btn btn-green" style="width:100%" onclick="finishReturn()">✅ Confirmar retorno</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="table-tools">
+            <strong>Histórico da portaria</strong>
+            <input class="input search-box" id="gateSearch" placeholder="Buscar..." oninput="renderGateHistory()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Motorista</th>
+                  <th>Veículo</th>
+                  <th>Destino</th>
+                  <th>Status</th>
+                  <th>Aprovado por</th>
+                  <th>Saída</th>
+                  <th>Agente saída</th>
+                  <th>Retorno</th>
+                  <th>Agente retorno</th>
+                </tr>
+              </thead>
+              <tbody id="gateHistory"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer-sign">🛡️ Controle de Portaria</div>
+  </div>
+
+
+
+  <!-- MODAL SOLICITAÇÃO DE NOVO USUÁRIO PELO GESTOR -->
+  <div class="modal" id="userRequestModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3>Solicitar novo usuário</h3>
+          <p class="subtitle" style="font-size:14px;margin-top:5px">
+            O cadastro sobe para o Admin aprovar. Enquanto não aprovar, o usuário não consegue acessar.
+          </p>
+        </div>
+        <button class="close-btn" onclick="closeUserRequestModal()">×</button>
+      </div>
+
+      <form id="userRequestForm">
+        <div class="grid-2">
+          <div class="field">
+            <label for="requestUserName">Nome completo</label>
+            <input class="input" id="requestUserName" required placeholder="Nome da pessoa" />
+          </div>
+
+          <div class="field">
+            <label for="requestUserArea">Área</label>
+            <input class="input" id="requestUserArea" required placeholder="Ex.: ADM, RH, Logística..." />
+          </div>
+
+          <div class="field">
+            <label for="requestUserLogin">Usuário sugerido</label>
+            <input class="input" id="requestUserLogin" required placeholder="Ex.: nome.sobrenome" />
+          </div>
+
+          <div class="field">
+            <label for="requestUserPassword">Senha inicial sugerida</label>
+            <input class="input" id="requestUserPassword" type="password" required placeholder="Senha inicial" />
+          </div>
+
+          <div class="field">
+            <label for="requestUserProfile">Perfil solicitado</label>
+            <select class="select" id="requestUserProfile">
+              <option value="gestor">Gestor</option>
+              <option value="portaria">Agente de portaria</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="requestUserCanApprove">Se for gestor, pode aprovar?</label>
+            <select class="select" id="requestUserCanApprove">
+              <option value="false">Não, apenas acesso gestor</option>
+              <option value="true">Sim, solicitar como aprovador</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="requestUserReason">Justificativa</label>
+          <textarea class="textarea" id="requestUserReason" placeholder="Explique por que essa pessoa precisa de acesso"></textarea>
+        </div>
+
+        <div class="actions" style="justify-content:flex-end">
+          <button class="btn btn-secondary" type="button" onclick="closeUserRequestModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Enviar para o Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CADASTRAR GESTOR -->
+  <div class="modal" id="managerModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3>Cadastrar gestor / aprovador</h3>
+          <p class="subtitle" style="font-size:14px;margin-top:5px">
+            Cada pessoa deve ter usuário e senha próprios. O perfil Admin é separado do perfil Gestor.
+          </p>
+        </div>
+        <button class="close-btn" onclick="closeManagerModal()">×</button>
+      </div>
+
+      <form id="managerForm">
+        <div class="grid-2">
+          <div class="field">
+            <label for="newManagerName">Nome completo</label>
+            <input class="input" id="newManagerName" placeholder="Ex.: João Silva" required />
+          </div>
+
+          <div class="field">
+            <label for="newManagerUser">Usuário</label>
+            <input class="input" id="newManagerUser" placeholder="Ex.: joao.silva" required />
+          </div>
+
+          <div class="field">
+            <label for="newManagerPassword">Senha inicial</label>
+            <input class="input" id="newManagerPassword" type="password" placeholder="Senha única do gestor" required />
+          </div>
+
+          <div class="field">
+            <label for="newManagerCanApprove">Pode aprovar?</label>
+            <select class="select" id="newManagerCanApprove">
+              <option value="true">Sim</option>
+              <option value="false">Não, apenas visualizar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="security-note">
+          Importante: no teste local a senha fica no navegador. No Supabase real, o correto é usar Supabase Auth + RLS,
+          para ninguém conseguir aprovar usando o nome de outro gestor.
+        </div>
+
+        <div class="actions" style="justify-content:flex-end">
+          <button class="btn btn-secondary" type="button" onclick="closeManagerModal()">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar gestor</button>
+        </div>
+      </form>
+
+      <div class="manager-list" id="managerList"></div>
+    </div>
+  </div>
+
+  <!-- MODAL CHECKLIST -->
+  <div class="modal" id="checklistModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3>Checklist de saída</h3>
+          <p class="subtitle" style="font-size:14px;margin-top:5px" id="checklistSubtitle">Confira o veículo antes da liberação.</p>
+        </div>
+        <button class="close-btn" onclick="closeChecklist()">×</button>
+      </div>
+
+      <form id="checklistForm">
+        <div class="grid-2">
+          <div class="field">
+            <label for="outKm">KM saída</label>
+            <input class="input" id="outKm" type="number" min="0" placeholder="Ex.: 14500" required />
+          </div>
+
+          <div class="field">
+            <label for="outFuel">Combustível saída</label>
+            <select class="select" id="outFuel" required>
+              <option>Cheio</option>
+              <option>3/4</option>
+              <option>1/2</option>
+              <option>1/4</option>
+              <option>Reserva</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="display:block;font-weight:900;color:var(--adm-blue);margin:8px 0 10px">Itens conferidos</label>
+        <div class="checklist">
+          <label class="check-item"><input type="checkbox" name="ck" value="Pneus em bom estado"> Pneus em bom estado</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Faróis funcionando"> Faróis funcionando</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Setas funcionando"> Setas funcionando</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Freios ok"> Freios ok</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Sem avarias visíveis"> Sem avarias visíveis</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Documentação ok"> Documentação ok</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Estepe/macaco ok"> Estepe/macaco ok</label>
+          <label class="check-item"><input type="checkbox" name="ck" value="Limpeza ok"> Limpeza ok</label>
+        </div>
+
+        <div class="field">
+          <label for="vehiclePhoto">Foto do veículo na saída</label>
+          <input class="input" id="vehiclePhoto" type="file" accept="image/*" capture="environment" onchange="handleChecklistPhoto(event)" required />
+          <div class="photo-preview" id="photoPreview">📷 Tire ou selecione uma foto do veículo antes de liberar.</div>
+        </div>
+
+        <div class="field">
+          <label>Assinatura eletrônica do motorista</label>
+          <div class="signature-wrap">
+            <canvas class="signature-canvas" id="driverSignature"></canvas>
+            <div class="signature-footer">
+              <span>Assine com dedo, caneta touch ou mouse.</span>
+              <button type="button" class="mini-btn red" onclick="clearSignature()">Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="outObs">Observações / avarias</label>
+          <textarea class="textarea" id="outObs" placeholder="Informe avarias, riscos, amassados ou qualquer observação importante"></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="gateAgent">Porteiro responsável</label>
+            <input class="input" id="gateAgent" placeholder="Nome do responsável pela liberação" required />
+          </div>
+
+          <div class="field">
+            <label for="driverConfirm">Motorista confirmou?</label>
+            <select class="select" id="driverConfirm" required>
+              <option>Sim</option>
+              <option>Não</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions" style="justify-content:flex-end">
+          <button class="btn btn-secondary" type="button" onclick="closeChecklist()">Cancelar</button>
+          <button class="btn btn-primary" type="submit">🚦 Liberar saída</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /************************************************************
+     * CONFIGURAÇÃO SUPABASE
+     ************************************************************/
+    const USE_SUPABASE = false; // troque para true quando configurar
+
+  const SUPABASE_URL = "https://xmsrgxqkrovovqjpvsgp.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_RE4Ocw7-COQmt110IBQ0Cg_QSlN0fNn";
+
+    const supabaseClient = USE_SUPABASE
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
+    /************************************************************
+     * DADOS INICIAIS / MOCK LOCAL
+     * Depois você pode puxar isso do Supabase.
+     ************************************************************/
+    const seedVehicles = [
+      { id: "v1", placa: "ADM-001", modelo: "Hilux", status: "Disponível" },
+      { id: "v2", placa: "ADM-002", modelo: "Corolla", status: "Disponível" },
+      { id: "v3", placa: "ADM-003", modelo: "Spin", status: "Disponível" },
+      { id: "v4", placa: "ADM-004", modelo: "Strada", status: "Manutenção" }
+    ];
+
+    const seedManagers = [
+      { id: "a1", nome: "Administrador ADM", usuario: "admin", senha: "1234", perfil: "admin", area: "Segurança Patrimonial", pode_aprovar: false, aprovador_aprovado: false, pode_cadastrar_gestor: true, ativo: true },
+      { id: "g1", nome: "Isacc Lopes Santos", usuario: "isacc", senha: "1234", perfil: "gestor", area: "ADM", pode_aprovar: true, aprovador_aprovado: true, pode_cadastrar_gestor: false, ativo: true },
+      { id: "g2", nome: "Gestor ADM", usuario: "gestor", senha: "1234", perfil: "gestor", area: "ADM", pode_aprovar: true, aprovador_aprovado: true, pode_cadastrar_gestor: false, ativo: true },
+      { id: "p1", nome: "Portaria ADM", usuario: "portaria", senha: "1234", perfil: "portaria", area: "Portaria", pode_aprovar: false, aprovador_aprovado: false, pode_cadastrar_gestor: false, ativo: true }
+    ];
+
+    let currentLoginType = "gestor";
+    let currentUser = JSON.parse(localStorage.getItem("adm_current_user") || "null");
+    let reservations = [];
+    let vehicles = [];
+    let managers = [];
+    let pendingUsers = [];
+    let selectedChecklistId = null;
+    let checklistPhotoData = "";
+    let signatureData = "";
+    let signatureDirty = false;
+    let managerFilter = "Todos";
+    let adminFilter = "Todos";
+    let lastApprovedIdsForSound = new Set();
+    let gateSoundMutedUntil = 0;
+    let lastOverdueSoundAt = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      try {
+        init();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao iniciar o sistema: " + err.message);
+      }
+    });
+
+    function init() {
+      const today = toDateInputValue(new Date());
+      const nowLocal = toDateTimeLocalValue(new Date());
+
+      document.getElementById("reqData").min = today;
+      document.getElementById("reqData").value = today;
+      document.getElementById("reqHora").value = "07:00";
+      document.getElementById("reqRetornoPrevisto").min = nowLocal;
+
+      bindForms();
+      loadAll();
+      updateUserHeader();
+
+      setInterval(() => {
+        if (document.getElementById("screen-gate").classList.contains("active")) {
+          renderGate();
+          checkGateAlerts();
+        }
+      }, 30000);
+    }
+
+    function bindForms() {
+      document.getElementById("loginForm").addEventListener("submit", handleLogin);
+      document.getElementById("requestForm").addEventListener("submit", createReservation);
+      document.getElementById("checklistForm").addEventListener("submit", releaseVehicle);
+      document.getElementById("managerForm").addEventListener("submit", createManager);
+      document.getElementById("adminUserForm").addEventListener("submit", createAdminUser);
+      document.getElementById("userRequestForm").addEventListener("submit", submitUserRequest);
+      setupSignaturePad();
+      window.addEventListener("resize", resizeSignatureCanvas);
+    }
+
+    async function loadAll() {
+      if (USE_SUPABASE) {
+        await loadFromSupabase();
+      } else {
+        loadFromLocal();
+      }
+
+      fillSelects();
+      renderEverything();
+    }
+
+    function loadFromLocal() {
+      vehicles = JSON.parse(localStorage.getItem("adm_vehicles") || "null") || seedVehicles;
+      managers = JSON.parse(localStorage.getItem("adm_managers") || "null") || seedManagers;
+      pendingUsers = JSON.parse(localStorage.getItem("adm_pending_users") || "[]");
+      reservations = JSON.parse(localStorage.getItem("adm_reservations") || "[]");
+
+      // MIGRAÇÃO LOCAL:
+      // Se você testou uma versão antiga, o navegador pode ter salvo gestores sem permissões.
+      // Aqui corrigimos os usuários antigos automaticamente, sem precisar limpar o localStorage.
+      const hasAdmin = managers.some(m => m.perfil === "admin" || String(m.usuario || "").toLowerCase() === "admin");
+      if (!hasAdmin) {
+        managers.unshift({
+          id: "a1",
+          nome: "Administrador ADM",
+          usuario: "admin",
+          senha: "1234",
+          perfil: "admin",
+          area: "Segurança Patrimonial",
+          pode_aprovar: false,
+          aprovador_aprovado: false,
+          pode_cadastrar_gestor: true,
+          ativo: true
+        });
+      }
+
+      managers = managers.map(m => {
+        const user = String(m.usuario || "").toLowerCase();
+
+        if (user === "isacc") {
+          return {
+            ...m,
+            nome: m.nome || "Isacc Lopes Santos",
+            perfil: "gestor",
+            area: m.area || "ADM",
+            pode_aprovar: true,
+            aprovador_aprovado: true,
+            pode_cadastrar_gestor: false,
+            ativo: true
+          };
+        }
+
+        if (user === "admin" || m.perfil === "admin") {
+          return {
+            ...m,
+            nome: m.nome || "Administrador ADM",
+            usuario: m.usuario || "admin",
+            perfil: "admin",
+            area: m.area || "Segurança Patrimonial",
+            pode_aprovar: false,
+            aprovador_aprovado: false,
+            pode_cadastrar_gestor: true,
+            ativo: true
+          };
+        }
+
+        if (m.perfil === "gestor") {
+          return {
+            ...m,
+            area: m.area || "Não informado",
+            pode_aprovar: m.pode_aprovar !== false,
+            aprovador_aprovado: m.aprovador_aprovado !== false && m.pode_aprovar !== false,
+            pode_cadastrar_gestor: m.pode_cadastrar_gestor === true,
+            ativo: m.ativo !== false
+          };
+        }
+
+        if (m.perfil === "portaria") {
+          return {
+            ...m,
+            area: m.area || "Portaria",
+            pode_aprovar: false,
+            aprovador_aprovado: false,
+            pode_cadastrar_gestor: false,
+            ativo: m.ativo !== false
+          };
+        }
+
+        return m;
+      });
+
+
+      // Corrige reservas antigas de teste: algumas ficaram só com nome/ID antigo do aprovador.
+      reservations = reservations.map(r => {
+        if (!r.aprovador_usuario && r.aprovador_nome) {
+          const gestor = managers.find(m => normalizeText(m.nome) === normalizeText(r.aprovador_nome));
+          if (gestor) {
+            return {
+              ...r,
+              aprovador_id: r.aprovador_id || gestor.id,
+              aprovador_usuario: gestor.usuario,
+              aprovador_area: gestor.area || r.aprovador_area || null
+            };
+          }
+        }
+        return r;
+      });
+      localStorage.setItem("adm_reservations", JSON.stringify(reservations));
+
+      localStorage.setItem("adm_vehicles", JSON.stringify(vehicles));
+      localStorage.setItem("adm_managers", JSON.stringify(managers));
+    }
+
+    async function loadFromSupabase() {
+      try {
+        const [vehiclesRes, managersRes, reservationsRes, pendingUsersRes] = await Promise.all([
+          supabaseClient.from("vehicles").select("*").order("placa"),
+          supabaseClient.from("managers").select("*").order("nome"),
+          supabaseClient.from("reservations").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("pending_users").select("*").order("created_at", { ascending: false })
+        ]);
+
+        if (vehiclesRes.error) throw vehiclesRes.error;
+        if (managersRes.error) throw managersRes.error;
+        if (reservationsRes.error) throw reservationsRes.error;
+        if (pendingUsersRes.error) console.warn("Tabela pending_users ainda não criada:", pendingUsersRes.error);
+
+        vehicles = vehiclesRes.data || [];
+        managers = managersRes.data || [];
+        reservations = reservationsRes.data || [];
+        pendingUsers = pendingUsersRes.data || [];
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao carregar dados do Supabase.");
+      }
+    }
+
+    async function saveReservation(record) {
+      if (USE_SUPABASE) {
+        const payload = normalizeForSupabase(record);
+        const { data, error } = await supabaseClient.from("reservations").insert(payload).select().single();
+        if (error) throw error;
+        return data;
+      }
+
+      reservations.unshift(record);
+      localStorage.setItem("adm_reservations", JSON.stringify(reservations));
+      return record;
+    }
+
+    async function updateReservation(id, patch) {
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from("reservations").update(patch).eq("id", id);
+        if (error) throw error;
+        await loadAll();
+        return;
+      }
+
+      reservations = reservations.map(r => r.id === id ? { ...r, ...patch } : r);
+      localStorage.setItem("adm_reservations", JSON.stringify(reservations));
+      renderEverything();
+    }
+
+    function normalizeForSupabase(record) {
+      const clean = { ...record };
+      delete clean.localOnly;
+      return clean;
+    }
+
+    function fillSelects() {
+      const vehicleSelect = document.getElementById("reqVeiculo");
+      vehicleSelect.innerHTML = "";
+
+      vehicles.forEach(v => {
+        const disabled = v.status && v.status !== "Disponível" ? "disabled" : "";
+        vehicleSelect.innerHTML += `<option value="${v.id}" ${disabled}>${v.placa} - ${v.modelo}${disabled ? " (indisponível)" : ""}</option>`;
+      });
+
+      const managerSelect = document.getElementById("reqAprovador");
+      managerSelect.innerHTML = `<option value="">Selecione o gestor responsável</option>`;
+      managers
+        .filter(m => m.perfil === "gestor" && m.ativo !== false && m.pode_aprovar !== false && m.aprovador_aprovado !== false)
+        .forEach(m => managerSelect.innerHTML += `<option value="${m.id}">${m.nome}${m.area ? " - " + m.area : ""}</option>`);
+
+      const returnSelect = document.getElementById("returnReservation");
+      const inUse = reservations.filter(r => r.status === "Em uso");
+      returnSelect.innerHTML = inUse.length
+        ? inUse.map(r => `<option value="${r.id}">${getVehicleLabel(r.vehicle_id)} | ${r.motorista} | ${formatDateTime(r.data_saida, r.hora_saida)}</option>`).join("")
+        : `<option value="">Nenhum veículo em uso</option>`;
+    }
+
+    function renderEverything() {
+      renderPublicMetrics();
+      renderPublicTable();
+      renderManager();
+      renderGate();
+      renderGateHistory();
+      renderAdminUsers();
+      renderPendingUsers();
+      renderAdminReservations();
+      checkVehicleAvailability();
+      checkGateAlerts();
+      fillSelects();
+    }
+
+
+    function resetarDadosLocaisTeste() {
+      localStorage.removeItem("adm_vehicles");
+      localStorage.removeItem("adm_managers");
+      localStorage.removeItem("adm_reservations");
+      localStorage.removeItem("adm_current_user");
+      currentUser = null;
+      loadAll();
+      updateUserHeader();
+      openScreen("screen-home");
+      toast("Dados locais de teste resetados.");
+    }
+
+    function openScreen(screenId) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(screenId).classList.add("active");
+
+      const titleMap = {
+        "screen-home": "Segurança Patrimonial | Reserva de Veículos",
+        "screen-login": "Login | Segurança Patrimonial",
+        "screen-request": "Solicitação de Veículos",
+        "screen-status": "Consulta de Reservas",
+        "screen-manager": "Painel do Gestor",
+        "screen-admin": "Painel Admin",
+        "screen-gate": "Controle de Portaria"
+      };
+
+      document.getElementById("moduleTitle").textContent = titleMap[screenId] || "Segurança Patrimonial";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      if (screenId === "screen-gate") {
+        lastApprovedIdsForSound = new Set(reservations.filter(r => r.status === "Aprovado").map(r => r.id));
+        checkGateAlerts();
+      }
+    }
+
+    function openLogin(type) {
+      currentLoginType = type;
+      document.getElementById("loginIcon").textContent = type === "gestor" ? "👔" : type === "portaria" ? "🛡️" : "⚙️";
+      document.getElementById("loginTitle").textContent = type === "gestor" ? "Login do gestor" : type === "portaria" ? "Login da portaria" : "Login do admin";
+      document.getElementById("loginText").textContent = type === "gestor"
+        ? "Acesse para aprovar ou recusar solicitações."
+        : type === "portaria"
+          ? "Acesse para liberar saída, checklist e retorno dos veículos."
+          : "Acesse para cadastrar, aprovar ou bloquear usuários.";
+      document.getElementById("loginUser").value = type === "portaria" ? "portaria" : type === "admin" ? "admin" : "";
+      document.getElementById("loginPassword").value = "";
+      openScreen("screen-login");
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+
+      const usuario = document.getElementById("loginUser").value.trim();
+      const senha = document.getElementById("loginPassword").value.trim();
+
+      const user = managers.find(m =>
+        m.usuario === usuario &&
+        m.senha === senha &&
+        m.perfil === currentLoginType &&
+        m.ativo !== false
+      );
+
+      if (!user) {
+        toast("Usuário ou senha inválidos.");
+        return;
+      }
+
+      currentUser = user;
+      localStorage.setItem("adm_current_user", JSON.stringify(currentUser));
+      updateUserHeader();
+      toast(`Bem-vindo(a), ${user.nome}`);
+
+      if (user.perfil === "admin") openScreen("screen-admin");
+      else if (user.perfil === "gestor") openScreen("screen-manager");
+      else if (user.perfil === "portaria") openScreen("screen-gate");
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem("adm_current_user");
+      updateUserHeader();
+      openScreen("screen-home");
+      toast("Sessão encerrada.");
+    }
+
+    function updateUserHeader() {
+      const name = currentUser?.nome || "Visitante";
+      document.getElementById("topUserName").textContent = name;
+      document.getElementById("avatar").textContent = initials(name);
+    }
+
+    function togglePassword() {
+      const input = document.getElementById("loginPassword");
+      input.type = input.type === "password" ? "text" : "password";
+    }
+
+    async function createReservation(event) {
+      event.preventDefault();
+
+      const vehicleId = document.getElementById("reqVeiculo").value;
+      const managerId = document.getElementById("reqAprovador").value;
+      const responsibleManager = managers.find(m => m.id === managerId);
+
+      if (!managerId) {
+        toast("Selecione o gestor responsável pela aprovação.");
+        return;
+      }
+
+      if (!validateNoPastRequest()) return;
+
+      const availability = getSelectedVehicleAvailability();
+      if (availability.status === "busy") {
+        toast("Esse carro não está na fábrica nesse período. Escolha outro veículo ou horário.");
+        checkVehicleAvailability();
+        return;
+      }
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        solicitante: document.getElementById("reqSolicitante").value.trim(),
+        motorista: document.getElementById("reqMotorista").value.trim(),
+        destino: document.getElementById("reqDestino").value.trim(),
+        area: document.getElementById("reqArea").value.trim(),
+        data_saida: document.getElementById("reqData").value,
+        hora_saida: document.getElementById("reqHora").value,
+        retorno_previsto: document.getElementById("reqRetornoPrevisto").value || null,
+        vehicle_id: vehicleId,
+        vehicle_label: getVehicleLabel(vehicleId),
+        aprovador_id: managerId,
+        aprovador_nome: getManagerName(managerId),
+        aprovador_usuario: responsibleManager?.usuario || null,
+        aprovador_area: responsibleManager?.area || null,
+        prioridade: document.getElementById("reqPrioridade").value,
+        justificativa: document.getElementById("reqJustificativa").value.trim(),
+        status: "Pendente",
+        aprovado_em: null,
+        aprovado_por: null,
+        aprovado_por_id: null,
+        aprovado_usuario: null,
+        aprovado_area: null,
+        recusado_em: null,
+        recusado_por: null,
+        recusa_motivo: null,
+        saida_em: null,
+        retorno_em: null,
+        km_saida: null,
+        km_retorno: null,
+        combustivel_saida: null,
+        combustivel_retorno: null,
+        checklist_saida: [],
+        obs_saida: null,
+        obs_retorno: null,
+        porteiro_saida: null
+      };
+
+      try {
+        await saveReservation(record);
+        document.getElementById("requestForm").reset();
+        document.getElementById("reqData").value = toDateInputValue(new Date());
+        document.getElementById("reqHora").value = "07:00";
+        document.getElementById("reqRetornoPrevisto").min = toDateTimeLocalValue(new Date());
+        await loadAll();
+        toast("Solicitação enviada para aprovação.");
+        openScreen("screen-status");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao salvar solicitação.");
+      }
+    }
+
+    function renderPublicMetrics() {
+      const box = document.getElementById("publicMetrics");
+      if (!box) return;
+      box.innerHTML = metricsHtml();
+    }
+
+    function renderPublicTable() {
+      const tbody = document.getElementById("publicTable");
+      if (!tbody) return;
+
+      const q = (document.getElementById("publicSearch")?.value || "").toLowerCase();
+      const rows = reservations
+        .filter(r => searchable(r).includes(q))
+        .slice(0, 80);
+
+      tbody.innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td>${formatDateTime(r.data_saida, r.hora_saida)}</td>
+          <td><strong>${escapeHtml(r.motorista)}</strong></td>
+          <td>${escapeHtml(r.destino)}</td>
+          <td>${escapeHtml(getVehicleLabel(r.vehicle_id) || r.vehicle_label || "")}</td>
+          <td>${statusBadge(r.status)}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="5"><div class="empty">Nenhuma reserva encontrada.</div></td></tr>`;
+    }
+
+    function renderManager() {
+      const metrics = document.getElementById("managerMetrics");
+      if (metrics) metrics.innerHTML = metricsHtml();
+
+      const tbody = document.getElementById("managerTable");
+      if (!tbody) return;
+
+      document.querySelectorAll("[data-manager-filter]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.managerFilter === managerFilter);
+      });
+
+      const q = (document.getElementById("managerSearch")?.value || "").toLowerCase();
+
+      let rows = reservations.filter(r => managerFilter === "Todos" || r.status === managerFilter);
+      rows = rows.filter(r => searchable(r).includes(q));
+
+      tbody.innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td>${formatDateTime(r.data_saida, r.hora_saida)}</td>
+          <td>${escapeHtml(r.solicitante)}</td>
+          <td><strong>${escapeHtml(r.motorista)}</strong></td>
+          <td>${escapeHtml(r.destino)}</td>
+          <td>${escapeHtml(getVehicleLabel(r.vehicle_id) || r.vehicle_label || "")}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${r.aprovado_por ? `${escapeHtml(r.aprovado_por)}<br><small>${formatDate(r.aprovado_em)}</small>` : "-"}</td>
+          <td>
+            <div class="row-actions">
+              ${r.status === "Pendente" && isReservationAssignedToCurrentUser(r) ? `
+                <button class="mini-btn green" onclick="approveReservation('${r.id}')">Aprovar</button>
+                <button class="mini-btn red" onclick="rejectReservation('${r.id}')">Recusar</button>
+              ` : ""}
+              ${r.status === "Pendente" && !isReservationAssignedToCurrentUser(r) ? `<span class="badge warning">Direcionado para ${escapeHtml(r.aprovador_nome || "-")}</span>` : ""}
+              <button class="mini-btn" onclick="printReservation('${r.id}')">Ver</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="8"><div class="empty">Nenhuma solicitação nessa visão.</div></td></tr>`;
+    }
+
+    function setManagerFilter(filter) {
+      managerFilter = filter;
+      renderManager();
+    }
+
+    async function approveReservation(id) {
+      if (!requireRole("gestor")) return;
+
+      const reservation = reservations.find(r => r.id === id);
+      if (!reservation) {
+        toast("Reserva não encontrada.");
+        return;
+      }
+
+      if (currentUser.pode_aprovar === false || currentUser.aprovador_aprovado === false) {
+        toast("Seu usuário ainda não está liberado como aprovador pelo admin.");
+        return;
+      }
+
+      if (!isReservationAssignedToCurrentUser(reservation)) {
+        toast(`Essa solicitação foi direcionada para ${reservation.aprovador_nome}. Somente esse gestor pode aprovar.`);
+        return;
+      }
+
+      if (reservation.status !== "Pendente") {
+        toast("Somente solicitações pendentes podem ser aprovadas.");
+        return;
+      }
+
+      const availability = getReservationAvailability(reservation);
+      if (availability.status === "busy") {
+        toast("Não é possível aprovar: o veículo não estará disponível nesse período.");
+        alert(availability.message.replace(/<[^>]*>/g, ""));
+        return;
+      }
+
+      const ok = confirm(
+        `Confirmar aprovação da reserva?\\n\\n` +
+        `Motorista: ${reservation.motorista}\\n` +
+        `Veículo: ${getVehicleLabel(reservation.vehicle_id) || reservation.vehicle_label}\\n` +
+        `Saída: ${formatDateTime(reservation.data_saida, reservation.hora_saida)}\\n` +
+        `Retorno previsto: ${formatDate(reservation.retorno_previsto)}\\n\\n` +
+        `Essa aprovação ficará gravada no seu usuário: ${currentUser.nome}.`
+      );
+
+      if (!ok) return;
+
+      await updateReservation(id, {
+        status: "Aprovado",
+        aprovado_em: new Date().toISOString(),
+        aprovado_por: currentUser.nome,
+        aprovado_por_id: currentUser.id,
+        aprovado_usuario: currentUser.usuario,
+        aprovado_area: currentUser.area || ""
+      });
+
+      toast(`Solicitação aprovada por ${currentUser.nome}.`);
+      checkGateAlerts(true);
+    }
+
+    async function rejectReservation(id) {
+      if (!requireRole("gestor")) return;
+
+      const reservation = reservations.find(r => r.id === id);
+      if (!reservation) {
+        toast("Reserva não encontrada.");
+        return;
+      }
+
+      if (!isReservationAssignedToCurrentUser(reservation)) {
+        toast(`Essa solicitação foi direcionada para ${reservation.aprovador_nome}. Somente esse gestor pode recusar.`);
+        return;
+      }
+
+      if (reservation.status !== "Pendente") {
+        toast("Somente solicitações pendentes podem ser recusadas.");
+        return;
+      }
+
+      const ok = confirm(
+        `Tem certeza que deseja RECUSAR essa reserva?\\n\\n` +
+        `Motorista: ${reservation.motorista}\\n` +
+        `Veículo: ${getVehicleLabel(reservation.vehicle_id) || reservation.vehicle_label}\\n` +
+        `Saída: ${formatDateTime(reservation.data_saida, reservation.hora_saida)}`
+      );
+
+      if (!ok) return;
+
+      const motivo = prompt("Informe o motivo da recusa:");
+      if (motivo === null) return;
+
+      await updateReservation(id, {
+        status: "Recusado",
+        recusado_em: new Date().toISOString(),
+        recusado_por: currentUser.nome,
+        recusado_por_id: currentUser.id,
+        recusa_motivo: motivo || "Sem motivo informado"
+      });
+
+      toast("Solicitação recusada.");
+    }
+
+    function renderGate() {
+      const metrics = document.getElementById("gateMetrics");
+      if (metrics) metrics.innerHTML = metricsHtml();
+
+      const board = document.getElementById("gateBoard");
+      if (!board) return;
+
+      const rows = reservations
+        .filter(r => ["Aprovado", "Em uso"].includes(r.status))
+        .sort((a,b) => String(a.data_saida + a.hora_saida).localeCompare(String(b.data_saida + b.hora_saida)));
+
+      board.innerHTML = rows.length ? rows.map(r => {
+        const overdue = isReturnOverdue(r);
+        return `
+        <div class="status-card ${r.status === "Em uso" ? "out" : ""} ${overdue ? "overdue" : ""}">
+          <div>
+            <div class="status-title">${overdue ? "🚨 RETORNO ATRASADO • " : ""}${escapeHtml(getVehicleLabel(r.vehicle_id) || r.vehicle_label || "")} • ${escapeHtml(r.motorista)}</div>
+            <div class="status-meta">
+              Destino: ${escapeHtml(r.destino)}<br>
+              Saída prevista: ${formatDateTime(r.data_saida, r.hora_saida)}<br>
+              Retorno previsto: ${r.retorno_previsto ? formatDate(r.retorno_previsto) : "-"}<br>
+              Status: ${r.status}<br>
+              Aprovado por: ${r.aprovado_por ? escapeHtml(r.aprovado_por) + (r.aprovado_area ? " • " + escapeHtml(r.aprovado_area) : "") + " em " + formatDate(r.aprovado_em) : "-"}
+            </div>
+          </div>
+          <div class="row-actions">
+            ${r.status === "Aprovado" ? `<button class="mini-btn dark" onclick="openChecklist('${r.id}')">Liberar saída</button>` : ""}
+            ${r.status === "Em uso" ? `<button class="mini-btn green" onclick="selectReturn('${r.id}')">Retorno</button>` : ""}
+          </div>
+        </div>
+      `}).join("") : `<div class="empty">Nenhum veículo aguardando liberação.</div>`;
+
+      fillSelects();
+    }
+
+    function renderGateHistory() {
+      const tbody = document.getElementById("gateHistory");
+      if (!tbody) return;
+
+      const q = (document.getElementById("gateSearch")?.value || "").toLowerCase();
+      const rows = reservations.filter(r => searchable(r).includes(q));
+
+      tbody.innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td>${formatDateTime(r.data_saida, r.hora_saida)}</td>
+          <td><strong>${escapeHtml(r.motorista)}</strong></td>
+          <td>${escapeHtml(getVehicleLabel(r.vehicle_id) || r.vehicle_label || "")}</td>
+          <td>${escapeHtml(r.destino)}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${r.aprovado_por ? escapeHtml(r.aprovado_por) : "-"}</td>
+          <td>${r.saida_em ? formatDate(r.saida_em) : "-"}</td>
+          <td>${r.porteiro_saida ? escapeHtml(r.porteiro_saida) : "-"}</td>
+          <td>${r.retorno_em ? formatDate(r.retorno_em) : "-"}</td>
+          <td>${r.porteiro_retorno ? escapeHtml(r.porteiro_retorno) : "-"}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="10"><div class="empty">Sem histórico.</div></td></tr>`;
+    }
+
+    function openChecklist(id) {
+      if (!requireRole("portaria")) return;
+
+      const r = reservations.find(item => item.id === id);
+      if (!r) return;
+
+      selectedChecklistId = id;
+      document.getElementById("checklistSubtitle").textContent =
+        `${getVehicleLabel(r.vehicle_id)} • ${r.motorista} • ${r.destino} • Aprovado por: ${r.aprovado_por || "-"}`;
+
+      document.getElementById("outKm").value = "";
+      document.getElementById("outObs").value = "";
+      document.getElementById("vehiclePhoto").value = "";
+      document.getElementById("photoPreview").innerHTML = "📷 Tire ou selecione uma foto do veículo antes de liberar.";
+      checklistPhotoData = "";
+      signatureData = "";
+      signatureDirty = false;
+      document.getElementById("gateAgent").value = currentUser?.nome || "";
+      document.querySelectorAll("input[name='ck']").forEach(c => c.checked = false);
+
+      document.getElementById("checklistModal").classList.add("active");
+      setTimeout(() => {
+        resizeSignatureCanvas();
+        clearSignature();
+      }, 80);
+    }
+
+    function closeChecklist() {
+      selectedChecklistId = null;
+      document.getElementById("checklistModal").classList.remove("active");
+    }
+
+    async function releaseVehicle(event) {
+      event.preventDefault();
+      if (!selectedChecklistId) return;
+      if (!requireRole("portaria")) return;
+
+      const checks = [...document.querySelectorAll("input[name='ck']:checked")].map(c => c.value);
+
+      if (checks.length < 6) {
+        toast("Confira pelo menos 6 itens do checklist antes de liberar.");
+        return;
+      }
+
+      const reservation = reservations.find(r => r.id === selectedChecklistId);
+      if (!reservation) return;
+
+      if (!isVehicleInFactoryForRelease(reservation)) {
+        toast("Esse carro não está na fábrica ou existe conflito de horário. Não é possível liberar saída.");
+        return;
+      }
+
+      if (!checklistPhotoData) {
+        toast("Tire ou selecione uma foto do veículo antes de liberar.");
+        return;
+      }
+
+      if (!signatureDirty || !signatureData) {
+        toast("O motorista precisa assinar eletronicamente antes da liberação.");
+        return;
+      }
+
+      await updateReservation(selectedChecklistId, {
+        status: "Em uso",
+        saida_em: new Date().toISOString(),
+        km_saida: Number(document.getElementById("outKm").value),
+        combustivel_saida: document.getElementById("outFuel").value,
+        checklist_saida: checks,
+        foto_saida: checklistPhotoData,
+        assinatura_motorista_saida: signatureData,
+        obs_saida: document.getElementById("outObs").value.trim(),
+        porteiro_saida: currentUser.nome,
+        porteiro_saida_id: currentUser.id,
+        porteiro_saida_usuario: currentUser.usuario,
+        motorista_confirmou: document.getElementById("driverConfirm").value
+      });
+
+      closeChecklist();
+      toast("Saída liberada com checklist registrado.");
+    }
+
+    function selectReturn(id) {
+      document.getElementById("returnReservation").value = id;
+      document.getElementById("returnKm").focus();
+    }
+
+    async function finishReturn() {
+      if (!requireRole("portaria")) return;
+
+      const id = document.getElementById("returnReservation").value;
+      if (!id) {
+        toast("Selecione uma reserva em uso.");
+        return;
+      }
+
+      const km = document.getElementById("returnKm").value;
+      if (!km) {
+        toast("Informe o KM de retorno.");
+        return;
+      }
+
+      await updateReservation(id, {
+        status: "Finalizado",
+        retorno_em: new Date().toISOString(),
+        km_retorno: Number(km),
+        combustivel_retorno: document.getElementById("returnFuel").value,
+        obs_retorno: document.getElementById("returnObs").value.trim(),
+        porteiro_retorno: currentUser.nome,
+        porteiro_retorno_id: currentUser.id,
+        porteiro_retorno_usuario: currentUser.usuario
+      });
+
+      document.getElementById("returnKm").value = "";
+      document.getElementById("returnObs").value = "";
+      toast("Retorno registrado e reserva finalizada.");
+    }
+
+
+
+    function openAdminPanel() {
+      if (!requireAdmin()) return;
+      openScreen("screen-admin");
+      renderAdminUsers();
+    }
+
+    function toggleAdminProfileOptions() {
+      const profile = document.getElementById("adminNewProfile").value;
+      document.getElementById("adminApproveField").classList.toggle("hide", profile === "portaria");
+    }
+
+    async function createAdminUser(event) {
+      event.preventDefault();
+
+      if (!requireAdmin()) return;
+
+      const nome = document.getElementById("adminNewName").value.trim();
+      const area = document.getElementById("adminNewArea").value.trim();
+      const usuario = document.getElementById("adminNewUser").value.trim().toLowerCase();
+      const senha = document.getElementById("adminNewPassword").value.trim();
+      const perfil = document.getElementById("adminNewProfile").value;
+      const canApprove = perfil === "gestor" && document.getElementById("adminNewCanApprove").value === "true";
+
+      if (managers.some(m => String(m.usuario).toLowerCase() === usuario)) {
+        toast("Já existe um usuário com esse login.");
+        return;
+      }
+
+      const newUser = {
+        id: crypto.randomUUID(),
+        nome,
+        usuario,
+        senha,
+        perfil,
+        area,
+        pode_aprovar: canApprove,
+        aprovador_aprovado: canApprove,
+        pode_cadastrar_gestor: false,
+        ativo: true,
+        criado_em: new Date().toISOString(),
+        criado_por: currentUser.nome,
+        criado_por_id: currentUser.id
+      };
+
+      if (perfil === "portaria") {
+        newUser.pode_aprovar = false;
+        newUser.aprovador_aprovado = false;
+      }
+
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from("managers").insert(newUser);
+        if (error) {
+          console.error(error);
+          toast("Erro ao salvar usuário no Supabase.");
+          return;
+        }
+        await loadAll();
+      } else {
+        managers.push(newUser);
+        localStorage.setItem("adm_managers", JSON.stringify(managers));
+      }
+
+      document.getElementById("adminUserForm").reset();
+      toggleAdminProfileOptions();
+      renderAdminUsers();
+      renderPendingUsers();
+      renderAdminReservations();
+      checkVehicleAvailability();
+      checkGateAlerts();
+      fillSelects();
+      toast(perfil === "portaria" ? "Agente de portaria cadastrado." : "Gestor cadastrado.");
+    }
+
+    function setAdminFilter(filter) {
+      adminFilter = filter;
+      renderAdminUsers();
+    }
+
+    function renderAdminUsers() {
+      const tbody = document.getElementById("adminUsersTable");
+      if (!tbody) return;
+
+      document.querySelectorAll("[data-admin-filter]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.adminFilter === adminFilter);
+      });
+
+      const q = (document.getElementById("adminSearch")?.value || "").toLowerCase();
+
+      let list = managers.filter(m => {
+        if (adminFilter === "Admin") return m.perfil === "admin" && m.ativo !== false;
+        if (adminFilter === "Gestores") return m.perfil === "gestor" && m.ativo !== false;
+        if (adminFilter === "Portaria") return m.perfil === "portaria" && m.ativo !== false;
+        if (adminFilter === "Pendentes") return m.perfil === "gestor" && m.pode_aprovar === true && m.aprovador_aprovado === false && m.ativo !== false;
+        if (adminFilter === "Inativos") return m.ativo === false;
+        return true;
+      });
+
+      list = list.filter(m => [m.nome, m.usuario, m.area, m.perfil].join(" ").toLowerCase().includes(q));
+
+      tbody.innerHTML = list.length ? list.map(m => `
+        <tr>
+          <td><strong>${escapeHtml(m.nome)}</strong></td>
+          <td>${escapeHtml(m.usuario)}</td>
+          <td>${escapeHtml(m.area || "-")}</td>
+          <td>${m.perfil === "admin" ? "Admin" : m.perfil === "portaria" ? "Agente portaria" : "Gestor"}</td>
+          <td>${approverStatusBadge(m)}</td>
+          <td>${m.ativo === false ? '<span class="badge danger">Inativo</span>' : '<span class="badge success">Ativo</span>'}</td>
+          <td>
+            <div class="row-actions">
+              ${m.perfil === "gestor" && m.pode_aprovar === true && m.aprovador_aprovado === false && m.ativo !== false ? `<button class="mini-btn green" onclick="approveUserApprover('${m.id}')">Aprovar aprovador</button>` : ""}
+              ${m.perfil === "gestor" && m.pode_aprovar !== true && m.ativo !== false ? `<button class="mini-btn green" onclick="markAsApprover('${m.id}')">Tornar aprovador</button>` : ""}
+              ${m.ativo === false ? `<button class="mini-btn green" onclick="restoreUser('${m.id}')">Reativar</button>` : `<button class="mini-btn red" onclick="deactivateUser('${m.id}')">Excluir</button>`}
+            </div>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="7"><div class="empty">Nenhum usuário encontrado.</div></td></tr>`;
+    }
+
+    function approverStatusBadge(m) {
+      if (m.perfil === "admin") return '<span class="badge success">Admin geral</span>';
+      if (m.perfil === "portaria") return '<span class="badge">Não aprova</span>';
+      if (m.pode_aprovar !== true) return '<span class="badge">Visualização</span>';
+      if (m.aprovador_aprovado === false) return '<span class="badge warning">Aguardando admin</span>';
+      return '<span class="badge success">Aprovador liberado</span>';
+    }
+
+    async function approveUserApprover(id) {
+      if (!requireAdmin()) return;
+
+      await patchUser(id, {
+        pode_aprovar: true,
+        aprovador_aprovado: true,
+        aprovado_como_aprovador_em: new Date().toISOString(),
+        aprovado_como_aprovador_por: currentUser.nome,
+        aprovado_como_aprovador_por_id: currentUser.id
+      });
+
+      toast("Aprovador liberado pelo admin.");
+    }
+
+    async function markAsApprover(id) {
+      if (!requireAdmin()) return;
+
+      await patchUser(id, {
+        pode_aprovar: true,
+        aprovador_aprovado: true,
+        aprovado_como_aprovador_em: new Date().toISOString(),
+        aprovado_como_aprovador_por: currentUser.nome,
+        aprovado_como_aprovador_por_id: currentUser.id
+      });
+
+      toast("Usuário agora é aprovador.");
+    }
+
+    async function deactivateUser(id) {
+      if (!requireAdmin()) return;
+
+      const user = managers.find(m => m.id === id);
+      if (!user) return;
+
+      if (user.id === currentUser.id) {
+        toast("Você não pode excluir o próprio usuário logado.");
+        return;
+      }
+
+      const ok = confirm(`Deseja realmente desativar ${user.nome}? O histórico será mantido.`);
+      if (!ok) return;
+
+      await patchUser(id, {
+        ativo: false,
+        desativado_em: new Date().toISOString(),
+        desativado_por: currentUser.nome,
+        desativado_por_id: currentUser.id
+      });
+
+      toast("Usuário desativado.");
+    }
+
+    async function restoreUser(id) {
+      if (!requireAdmin()) return;
+
+      await patchUser(id, {
+        ativo: true,
+        reativado_em: new Date().toISOString(),
+        reativado_por: currentUser.nome,
+        reativado_por_id: currentUser.id
+      });
+
+      toast("Usuário reativado.");
+    }
+
+    async function patchUser(id, patch) {
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from("managers").update(patch).eq("id", id);
+        if (error) {
+          console.error(error);
+          toast("Erro ao atualizar usuário no Supabase.");
+          return;
+        }
+        await loadAll();
+      } else {
+        managers = managers.map(m => m.id === id ? { ...m, ...patch } : m);
+        localStorage.setItem("adm_managers", JSON.stringify(managers));
+      }
+
+      renderAdminUsers();
+      renderPendingUsers();
+      renderAdminReservations();
+      checkVehicleAvailability();
+      checkGateAlerts();
+      fillSelects();
+    }
+
+    function requireAdmin() {
+      if (!currentUser || currentUser.perfil !== "admin") {
+        toast("Apenas o perfil Admin pode fazer essa operação.");
+        openLogin("admin");
+        return false;
+      }
+      return true;
+    }
+
+    // Compatibilidade com botão/modal antigo, caso exista no HTML
+    function openManagerModal() { openAdminPanel(); }
+    function closeManagerModal() {}
+    function createManager(event) { if (event) event.preventDefault(); openAdminPanel(); }
+    function renderManagerList() {}
+
+
+    function openUserRequestModal() {
+      if (!requireRole("gestor")) return;
+      document.getElementById("userRequestForm").reset();
+      document.getElementById("requestUserArea").value = currentUser?.area || "";
+      document.getElementById("userRequestModal").classList.add("active");
+    }
+
+    function closeUserRequestModal() {
+      document.getElementById("userRequestModal").classList.remove("active");
+    }
+
+    async function submitUserRequest(event) {
+      event.preventDefault();
+
+      if (!requireRole("gestor")) return;
+
+      const usuario = document.getElementById("requestUserLogin").value.trim().toLowerCase();
+
+      if (managers.some(m => String(m.usuario).toLowerCase() === usuario) ||
+          pendingUsers.some(p => String(p.usuario).toLowerCase() === usuario && p.status === "Pendente")) {
+        toast("Já existe usuário ou solicitação pendente com esse login.");
+        return;
+      }
+
+      const profile = document.getElementById("requestUserProfile").value;
+
+      const request = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        nome: document.getElementById("requestUserName").value.trim(),
+        area: document.getElementById("requestUserArea").value.trim(),
+        usuario,
+        senha: document.getElementById("requestUserPassword").value.trim(),
+        perfil: profile,
+        pode_aprovar: profile === "gestor" && document.getElementById("requestUserCanApprove").value === "true",
+        justificativa: document.getElementById("requestUserReason").value.trim(),
+        status: "Pendente",
+        solicitado_por: currentUser.nome,
+        solicitado_por_id: currentUser.id,
+        solicitado_por_usuario: currentUser.usuario
+      };
+
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from("pending_users").insert(request);
+        if (error) {
+          console.error(error);
+          toast("Erro ao enviar solicitação para o Admin.");
+          return;
+        }
+        await loadAll();
+      } else {
+        pendingUsers.unshift(request);
+        localStorage.setItem("adm_pending_users", JSON.stringify(pendingUsers));
+      }
+
+      closeUserRequestModal();
+      renderPendingUsers();
+      toast("Solicitação enviada para aprovação do Admin.");
+    }
+
+    function renderPendingUsers() {
+      const list = document.getElementById("pendingUsersList");
+      const count = document.getElementById("pendingUsersCount");
+      if (!list || !count) return;
+
+      const pendentes = pendingUsers.filter(p => p.status === "Pendente");
+      count.textContent = `${pendentes.length} pendente${pendentes.length === 1 ? "" : "s"}`;
+
+      list.innerHTML = pendentes.length ? pendentes.map(p => `
+        <div class="pending-user-card">
+          <div class="status-title">${escapeHtml(p.nome)} • ${p.perfil === "portaria" ? "Agente de portaria" : "Gestor"}</div>
+          <div class="status-meta">
+            Usuário: ${escapeHtml(p.usuario)}<br>
+            Área: ${escapeHtml(p.area || "-")}<br>
+            Solicitado por: ${escapeHtml(p.solicitado_por || "-")}<br>
+            Pode aprovar: ${p.pode_aprovar ? "Sim" : "Não"}<br>
+            Justificativa: ${escapeHtml(p.justificativa || "-")}
+          </div>
+          <div class="row-actions" style="margin-top:12px">
+            <button class="mini-btn green" onclick="approvePendingUser('${p.id}')">Aprovar cadastro</button>
+            <button class="mini-btn red" onclick="rejectPendingUser('${p.id}')">Recusar</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">Nenhuma solicitação pendente.</div>`;
+    }
+
+    async function approvePendingUser(id) {
+      if (!requireAdmin()) return;
+
+      const p = pendingUsers.find(item => item.id === id);
+      if (!p) return;
+
+      const ok = confirm(`Aprovar cadastro de ${p.nome} como ${p.perfil === "portaria" ? "agente de portaria" : "gestor"}?`);
+      if (!ok) return;
+
+      if (managers.some(m => String(m.usuario).toLowerCase() === String(p.usuario).toLowerCase())) {
+        toast("Já existe usuário cadastrado com esse login.");
+        return;
+      }
+
+      const newUser = {
+        id: crypto.randomUUID(),
+        nome: p.nome,
+        usuario: p.usuario,
+        senha: p.senha,
+        perfil: p.perfil,
+        area: p.area,
+        pode_aprovar: p.perfil === "gestor" && p.pode_aprovar === true,
+        aprovador_aprovado: p.perfil === "gestor" && p.pode_aprovar === true,
+        pode_cadastrar_gestor: false,
+        ativo: true,
+        criado_em: new Date().toISOString(),
+        criado_por: currentUser.nome,
+        criado_por_id: currentUser.id,
+        origem_solicitacao_id: p.id,
+        solicitado_por: p.solicitado_por,
+        solicitado_por_id: p.solicitado_por_id
+      };
+
+      if (USE_SUPABASE) {
+        const { error: insertError } = await supabaseClient.from("managers").insert(newUser);
+        if (insertError) {
+          console.error(insertError);
+          toast("Erro ao criar usuário.");
+          return;
+        }
+
+        const { error: updateError } = await supabaseClient.from("pending_users").update({
+          status: "Aprovado",
+          aprovado_em: new Date().toISOString(),
+          aprovado_por: currentUser.nome,
+          aprovado_por_id: currentUser.id
+        }).eq("id", id);
+
+        if (updateError) console.error(updateError);
+        await loadAll();
+      } else {
+        managers.push(newUser);
+        pendingUsers = pendingUsers.map(item => item.id === id ? {
+          ...item,
+          status: "Aprovado",
+          aprovado_em: new Date().toISOString(),
+          aprovado_por: currentUser.nome,
+          aprovado_por_id: currentUser.id
+        } : item);
+        localStorage.setItem("adm_managers", JSON.stringify(managers));
+        localStorage.setItem("adm_pending_users", JSON.stringify(pendingUsers));
+      }
+
+      renderPendingUsers();
+      renderAdminUsers();
+      fillSelects();
+      toast("Cadastro aprovado pelo Admin.");
+    }
+
+    async function rejectPendingUser(id) {
+      if (!requireAdmin()) return;
+
+      const motivo = prompt("Informe o motivo da recusa:");
+      if (motivo === null) return;
+
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from("pending_users").update({
+          status: "Recusado",
+          recusado_em: new Date().toISOString(),
+          recusado_por: currentUser.nome,
+          recusado_por_id: currentUser.id,
+          recusa_motivo: motivo || "Sem motivo informado"
+        }).eq("id", id);
+
+        if (error) {
+          console.error(error);
+          toast("Erro ao recusar solicitação.");
+          return;
+        }
+
+        await loadAll();
+      } else {
+        pendingUsers = pendingUsers.map(item => item.id === id ? {
+          ...item,
+          status: "Recusado",
+          recusado_em: new Date().toISOString(),
+          recusado_por: currentUser.nome,
+          recusado_por_id: currentUser.id,
+          recusa_motivo: motivo || "Sem motivo informado"
+        } : item);
+        localStorage.setItem("adm_pending_users", JSON.stringify(pendingUsers));
+      }
+
+      renderPendingUsers();
+      toast("Solicitação recusada.");
+    }
+
+    function renderAdminReservations() {
+      const tbody = document.getElementById("adminReservationsTable");
+      if (!tbody) return;
+
+      const rows = reservations.filter(r => ["Pendente", "Aprovado", "Em uso"].includes(r.status));
+
+      tbody.innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td>${formatDateTime(r.data_saida, r.hora_saida)}</td>
+          <td><strong>${escapeHtml(r.motorista)}</strong></td>
+          <td>${escapeHtml(getVehicleLabel(r.vehicle_id) || r.vehicle_label || "")}</td>
+          <td>${escapeHtml(r.destino)}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${r.aprovado_por ? escapeHtml(r.aprovado_por) : "-"}</td>
+          <td>
+            <div class="row-actions">
+              ${["Pendente", "Aprovado"].includes(r.status) ? `<button class="mini-btn red" onclick="adminCancelReservation('${r.id}')">Cancelar</button>` : ""}
+              ${r.status === "Em uso" ? `<span class="badge warning">Em uso</span>` : ""}
+            </div>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="7"><div class="empty">Nenhuma reserva ativa.</div></td></tr>`;
+    }
+
+    async function adminCancelReservation(id) {
+      if (!requireAdmin()) return;
+
+      const r = reservations.find(item => item.id === id);
+      if (!r) return;
+
+      if (r.status === "Em uso") {
+        toast("Reserva em uso não pode ser cancelada pelo Admin. A portaria precisa registrar o retorno.");
+        return;
+      }
+
+      const ok = confirm(
+        `Tem certeza que deseja cancelar essa reserva?\n\n` +
+        `Motorista: ${r.motorista}\n` +
+        `Veículo: ${getVehicleLabel(r.vehicle_id) || r.vehicle_label}\n` +
+        `Saída: ${formatDateTime(r.data_saida, r.hora_saida)}`
+      );
+      if (!ok) return;
+
+      const motivo = prompt(`Motivo do cancelamento da reserva de ${r.motorista}:`);
+      if (motivo === null) return;
+
+      await updateReservation(id, {
+        status: "Cancelado pelo Admin",
+        cancelado_em: new Date().toISOString(),
+        cancelado_por: currentUser.nome,
+        cancelado_por_id: currentUser.id,
+        cancelado_motivo: motivo || "Sem motivo informado"
+      });
+
+      renderAdminReservations();
+      toast("Reserva cancelada pelo Admin.");
+    }
+
+    function isVehicleInFactoryForRelease(reservation) {
+      if (!reservation || reservation.status !== "Aprovado") return false;
+
+      // Não libera se a reserva foi cancelada/recusada/finalizada.
+      if (["Recusado", "Finalizado", "Cancelado pelo Admin"].includes(reservation.status)) return false;
+
+      const now = new Date();
+      const reservationStart = new Date(`${reservation.data_saida}T${reservation.hora_saida || "00:00"}`);
+      const reservationEnd = reservation.retorno_previsto ? new Date(reservation.retorno_previsto) : null;
+
+      // Não pode liberar depois do retorno previsto já vencido.
+      if (reservationEnd && now > reservationEnd) return false;
+
+      // Não pode liberar muito antes. Janela de tolerância: 60 minutos antes.
+      const earliest = new Date(reservationStart.getTime() - 60 * 60 * 1000);
+      if (now < earliest) return false;
+
+      // Se outro registro do mesmo veículo já está em uso, ele não está na fábrica.
+      const otherInUse = reservations.find(r =>
+        r.id !== reservation.id &&
+        r.vehicle_id === reservation.vehicle_id &&
+        r.status === "Em uso"
+      );
+
+      if (otherInUse) return false;
+
+      return true;
+    }
+
+    function handleChecklistPhoto(event) {
+      const file = event.target.files && event.target.files[0];
+      const preview = document.getElementById("photoPreview");
+
+      if (!file) {
+        checklistPhotoData = "";
+        preview.innerHTML = "📷 Tire ou selecione uma foto do veículo antes de liberar.";
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast("Selecione um arquivo de imagem.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        checklistPhotoData = reader.result;
+        preview.innerHTML = `<img src="${checklistPhotoData}" alt="Foto do veículo na saída">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    let signatureCtx = null;
+    let signatureDrawing = false;
+
+    function setupSignaturePad() {
+      const canvas = document.getElementById("driverSignature");
+      if (!canvas) return;
+
+      signatureCtx = canvas.getContext("2d");
+      resizeSignatureCanvas();
+
+      canvas.addEventListener("pointerdown", startSignature);
+      canvas.addEventListener("pointermove", drawSignature);
+      canvas.addEventListener("pointerup", stopSignature);
+      canvas.addEventListener("pointercancel", stopSignature);
+      canvas.addEventListener("pointerleave", stopSignature);
+    }
+
+    function resizeSignatureCanvas() {
+      const canvas = document.getElementById("driverSignature");
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
+
+      const oldData = signatureData;
+      canvas.width = Math.max(320, Math.floor(rect.width * window.devicePixelRatio));
+      canvas.height = Math.floor(190 * window.devicePixelRatio);
+      canvas.style.height = "190px";
+
+      signatureCtx = canvas.getContext("2d");
+      signatureCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      signatureCtx.lineWidth = 2.4;
+      signatureCtx.lineCap = "round";
+      signatureCtx.strokeStyle = "#08245c";
+
+      if (oldData && signatureDirty) {
+        const img = new Image();
+        img.onload = () => signatureCtx.drawImage(img, 0, 0, rect.width, 190);
+        img.src = oldData;
+      }
+    }
+
+    function pointerPosition(canvas, event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function startSignature(event) {
+      const canvas = document.getElementById("driverSignature");
+      signatureDrawing = true;
+      signatureDirty = true;
+      const pos = pointerPosition(canvas, event);
+      signatureCtx.beginPath();
+      signatureCtx.moveTo(pos.x, pos.y);
+      event.preventDefault();
+    }
+
+    function drawSignature(event) {
+      if (!signatureDrawing) return;
+      const canvas = document.getElementById("driverSignature");
+      const pos = pointerPosition(canvas, event);
+      signatureCtx.lineTo(pos.x, pos.y);
+      signatureCtx.stroke();
+      signatureData = canvas.toDataURL("image/png");
+      event.preventDefault();
+    }
+
+    function stopSignature() {
+      if (!signatureDrawing) return;
+      signatureDrawing = false;
+      const canvas = document.getElementById("driverSignature");
+      signatureData = canvas.toDataURL("image/png");
+    }
+
+    function clearSignature() {
+      const canvas = document.getElementById("driverSignature");
+      if (!canvas || !signatureCtx) return;
+      signatureCtx.clearRect(0, 0, canvas.width, canvas.height);
+      signatureData = "";
+      signatureDirty = false;
+    }
+
+
+    function requireRole(role) {
+      if (!currentUser || currentUser.perfil !== role) {
+        toast(role === "gestor" ? "Faça login como gestor." : "Faça login como portaria.");
+        openLogin(role);
+        return false;
+      }
+      return true;
+    }
+
+    function printReservation(id) {
+      const r = reservations.find(item => item.id === id);
+      if (!r) return;
+
+      const details = `
+Reserva ADM
+
+Status: ${r.status}
+Solicitante: ${r.solicitante}
+Motorista: ${r.motorista}
+Área: ${r.area}
+Destino: ${r.destino}
+Veículo: ${getVehicleLabel(r.vehicle_id) || r.vehicle_label}
+Saída prevista: ${formatDateTime(r.data_saida, r.hora_saida)}
+Gestor responsável solicitado: ${r.aprovador_nome}
+Aprovado por: ${r.aprovado_por || "-"} (${r.aprovado_usuario || "-"})
+Aprovado em: ${r.aprovado_em ? formatDate(r.aprovado_em) : "-"}
+Justificativa: ${r.justificativa || "-"}
+KM saída: ${r.km_saida || "-"}
+KM retorno: ${r.km_retorno || "-"}
+Checklist: ${(r.checklist_saida || []).join(", ") || "-"}
+Observação saída: ${r.obs_saida || "-"}
+Observação retorno: ${r.obs_retorno || "-"}
+      `.trim();
+
+      alert(details);
+    }
+
+
+    function toDateInputValue(date) {
+      const d = new Date(date);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function toDateTimeLocalValue(date) {
+      const d = new Date(date);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    }
+
+    function validateNoPastRequest() {
+      const data = document.getElementById("reqData").value;
+      const hora = document.getElementById("reqHora").value;
+
+      if (!data || !hora) return true;
+
+      const start = new Date(`${data}T${hora}`);
+      const now = new Date();
+
+      if (start < now) {
+        toast("Não é permitido solicitar veículo com data ou horário retroativo.");
+        return false;
+      }
+
+      const retorno = document.getElementById("reqRetornoPrevisto").value;
+      if (!retorno) {
+        toast("Informe o retorno previsto para validar se o carro estará na fábrica.");
+        return false;
+      }
+
+      if (new Date(retorno) <= start) {
+        toast("O retorno previsto precisa ser depois da saída.");
+        return false;
+      }
+
+      return true;
+    }
+
+
+
+    function normalizeText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+    }
+
+    function isReservationAssignedToCurrentUser(r) {
+      if (!currentUser || !r) return false;
+
+      const sameId = r.aprovador_id && currentUser.id && String(r.aprovador_id) === String(currentUser.id);
+      const sameUser = r.aprovador_usuario && currentUser.usuario && normalizeText(r.aprovador_usuario) === normalizeText(currentUser.usuario);
+      const sameName = r.aprovador_nome && currentUser.nome && normalizeText(r.aprovador_nome) === normalizeText(currentUser.nome);
+
+      return sameId || sameUser || sameName;
+    }
+
+    function getReservationAvailability(reservation) {
+      if (!reservation) return { status: "busy", message: "Reserva não encontrada." };
+
+      const start = new Date(`${reservation.data_saida}T${reservation.hora_saida || "00:00"}`);
+      const end = reservation.retorno_previsto ? new Date(reservation.retorno_previsto) : null;
+
+      if (!end) {
+        return { status: "busy", message: "Reserva sem retorno previsto. Não é possível validar disponibilidade." };
+      }
+
+      if (end <= start) {
+        return { status: "busy", message: "Retorno previsto menor ou igual ao horário de saída." };
+      }
+
+      const vehicle = vehicles.find(v => v.id === reservation.vehicle_id);
+      if (vehicle && vehicle.status && vehicle.status !== "Disponível") {
+        return { status: "busy", message: `Veículo indisponível: ${vehicle.status}.` };
+      }
+
+      const conflict = reservations.find(r => {
+        if (r.id === reservation.id) return false;
+        if (r.vehicle_id !== reservation.vehicle_id) return false;
+        if (!["Pendente", "Aprovado", "Em uso"].includes(r.status)) return false;
+
+        const rStart = new Date(`${r.data_saida}T${r.hora_saida || "00:00"}`);
+        const rEnd = r.retorno_previsto ? new Date(r.retorno_previsto) : new Date(rStart.getTime() + 2 * 60 * 60 * 1000);
+
+        return start < rEnd && end > rStart;
+      });
+
+      if (conflict) {
+        return {
+          status: "busy",
+          conflict,
+          message: `Conflito com reserva de ${conflict.motorista}: ${formatDateTime(conflict.data_saida, conflict.hora_saida)} até ${conflict.retorno_previsto ? formatDate(conflict.retorno_previsto) : "retorno não informado"}.`
+        };
+      }
+
+      return { status: "ok", message: "Veículo disponível." };
+    }
+
+    function getSelectedVehicleAvailability() {
+      const vehicleId = document.getElementById("reqVeiculo")?.value;
+      const data = document.getElementById("reqData")?.value;
+      const hora = document.getElementById("reqHora")?.value;
+      const retorno = document.getElementById("reqRetornoPrevisto")?.value;
+
+      if (!vehicleId || !data || !hora || !retorno) {
+        return { status: "warn", message: "Selecione data, hora, retorno previsto e veículo para validar disponibilidade." };
+      }
+
+      const start = new Date(`${data}T${hora}`);
+      const end = new Date(retorno);
+
+      if (start < new Date()) {
+        return { status: "busy", message: "Não é permitido selecionar data ou horário retroativo." };
+      }
+
+      if (retorno && end <= start) {
+        return { status: "busy", message: "O retorno previsto precisa ser depois da saída." };
+      }
+
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (vehicle && vehicle.status && vehicle.status !== "Disponível") {
+        return { status: "busy", message: `Veículo indisponível: ${vehicle.status}.` };
+      }
+
+      const conflict = reservations.find(r => {
+        if (r.vehicle_id !== vehicleId) return false;
+        if (!["Pendente", "Aprovado", "Em uso"].includes(r.status)) return false;
+
+        const rStart = new Date(`${r.data_saida}T${r.hora_saida || "00:00"}`);
+        const rEnd = r.retorno_previsto
+          ? new Date(r.retorno_previsto)
+          : new Date(rStart.getTime() + 2 * 60 * 60 * 1000);
+
+        return start < rEnd && end > rStart;
+      });
+
+      if (conflict) {
+        return {
+          status: "busy",
+          conflict,
+          message: `🚫 Carro não está na fábrica nesse período. Conflito com reserva ativa para ${escapeHtml(conflict.motorista)}: ${formatDateTime(conflict.data_saida, conflict.hora_saida)} até ${conflict.retorno_previsto ? formatDate(conflict.retorno_previsto) : "retorno não informado"}. Não é possível reservar por cima desse horário.`
+        };
+      }
+
+      return { status: "ok", message: "✅ Veículo disponível para esse período." };
+    }
+
+    function checkVehicleAvailability() {
+      const box = document.getElementById("availabilityBox");
+      if (!box) return;
+
+      const availability = getSelectedVehicleAvailability();
+      box.className = `availability-box ${availability.status}`;
+      box.innerHTML = availability.message;
+    }
+
+    function isReturnOverdue(r) {
+      if (r.status !== "Em uso" || !r.retorno_previsto || r.retorno_em) return false;
+      return new Date() > new Date(r.retorno_previsto);
+    }
+
+    function checkGateAlerts(forceSound = false) {
+      const gateScreenActive = document.getElementById("screen-gate")?.classList.contains("active");
+      const alertBox = document.getElementById("gateAlert");
+      if (!alertBox) return;
+
+      const approved = reservations.filter(r => r.status === "Aprovado");
+      const overdue = reservations.filter(isReturnOverdue);
+
+      const approvedIds = new Set(approved.map(r => r.id));
+      const hasNewApproved = approved.some(r => !lastApprovedIdsForSound.has(r.id));
+
+      let title = "";
+      let text = "";
+
+      if (overdue.length) {
+        title = "🚨 Veículo com retorno atrasado";
+        text = overdue.map(r => `${getVehicleLabel(r.vehicle_id) || r.vehicle_label} • ${r.motorista} • previsto: ${formatDate(r.retorno_previsto)}`).join(" | ");
+        alertBox.classList.add("active");
+      } else if (approved.length) {
+        title = "🔔 Nova reserva aprovada";
+        text = approved.map(r => `${getVehicleLabel(r.vehicle_id) || r.vehicle_label} • ${r.motorista} • ${formatDateTime(r.data_saida, r.hora_saida)}`).join(" | ");
+        alertBox.classList.add("active");
+      } else {
+        alertBox.classList.remove("active");
+      }
+
+      document.getElementById("gateAlertTitle").textContent = title;
+      document.getElementById("gateAlertText").textContent = text;
+
+      const now = Date.now();
+      const muted = now < gateSoundMutedUntil;
+
+      if (gateScreenActive && !muted) {
+        if (overdue.length && now - lastOverdueSoundAt > 60000) {
+          playGateSound("overdue");
+          lastOverdueSoundAt = now;
+        } else if ((hasNewApproved || forceSound) && approved.length) {
+          playGateSound("approved");
+        }
+      }
+
+      lastApprovedIdsForSound = approvedIds;
+    }
+
+    function ackGateAlert() {
+      gateSoundMutedUntil = Date.now() + 5 * 60 * 1000;
+      toast("Som da portaria silenciado por 5 minutos.");
+    }
+
+    function playGateSound(type = "approved") {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+
+        const pattern = type === "overdue"
+          ? [880, 660, 880, 660]
+          : [660, 880];
+
+        pattern.forEach((freq, index) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          const start = ctx.currentTime + index * 0.18;
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
+
+          osc.start(start);
+          osc.stop(start + 0.16);
+        });
+      } catch (err) {
+        console.warn("Som bloqueado pelo navegador até interação do usuário.", err);
+      }
+    }
+
+
+    function metricsHtml() {
+      const total = reservations.length;
+      const pending = reservations.filter(r => r.status === "Pendente").length;
+      const approved = reservations.filter(r => r.status === "Aprovado").length;
+      const inUse = reservations.filter(r => r.status === "Em uso").length;
+
+      return `
+        <div class="metric-card">
+          <div class="metric-icon">📋</div>
+          <div><div class="metric-value">${total}</div><div class="metric-label">Total reservas</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">⏳</div>
+          <div><div class="metric-value">${pending}</div><div class="metric-label">Pendentes</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">✅</div>
+          <div><div class="metric-value">${approved}</div><div class="metric-label">Aprovadas</div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">🚘</div>
+          <div><div class="metric-value">${inUse}</div><div class="metric-label">Em uso</div></div>
+        </div>
+      `;
+    }
+
+    function statusBadge(status) {
+      const cls = status === "Aprovado" ? "success"
+        : status === "Pendente" ? "warning"
+        : status === "Recusado" ? "danger"
+        : status === "Em uso" ? ""
+        : "success";
+
+      return `<span class="badge ${cls}">${status}</span>`;
+    }
+
+    function searchable(r) {
+      return [
+        r.solicitante, r.motorista, r.destino, r.area, r.status,
+        r.vehicle_label, getVehicleLabel(r.vehicle_id), r.aprovador_nome
+      ].join(" ").toLowerCase();
+    }
+
+    function getVehicleLabel(id) {
+      const v = vehicles.find(item => item.id === id);
+      return v ? `${v.placa} - ${v.modelo}` : "";
+    }
+
+    function getManagerName(id) {
+      const m = managers.find(item => item.id === id);
+      return m ? m.nome : "";
+    }
+
+    function initials(name) {
+      return String(name || "V").split(" ").filter(Boolean).slice(0,2).map(p => p[0]).join("").toUpperCase();
+    }
+
+    function formatDateTime(date, time) {
+      if (!date) return "-";
+      const [y,m,d] = date.split("-");
+      return `${d}/${m}/${y}${time ? " " + time : ""}`;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "-";
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return "-";
+      return date.toLocaleString("pt-BR");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    let toastTimer;
+    function toast(message) {
+      const el = document.getElementById("toast");
+      el.textContent = message;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+    }
+
+    /************************************************************
+     * SQL SUGERIDO PARA SUPABASE
+     *
+     * Rode no SQL Editor do Supabase:
+     *
+     * create table vehicles (
+     *   id uuid primary key default gen_random_uuid(),
+     *   placa text not null,
+     *   modelo text not null,
+     *   status text default 'Disponível',
+     *   created_at timestamptz default now()
+     * );
+     *
+     * create table managers (
+     *   id uuid primary key default gen_random_uuid(),
+     *   nome text not null,
+     *   usuario text not null unique,
+     *   senha text not null,
+     *   perfil text not null check (perfil in ('admin', 'gestor', 'portaria')),
+     *   area text,
+     *   pode_aprovar boolean default true,
+     *   aprovador_aprovado boolean default false,
+     *   pode_cadastrar_gestor boolean default false,
+     *   ativo boolean default true,
+     *   criado_em timestamptz,
+     *   criado_por text,
+     *   criado_por_id uuid,
+     *   aprovado_como_aprovador_em timestamptz,
+     *   aprovado_como_aprovador_por text,
+     *   aprovado_como_aprovador_por_id uuid,
+     *   desativado_em timestamptz,
+     *   desativado_por text,
+     *   desativado_por_id uuid,
+     *   created_at timestamptz default now()
+     * );
+     *
+     * create table pending_users (
+     *   id uuid primary key default gen_random_uuid(),
+     *   created_at timestamptz default now(),
+     *   nome text,
+     *   usuario text,
+     *   senha text,
+     *   perfil text check (perfil in ('gestor', 'portaria')),
+     *   area text,
+     *   pode_aprovar boolean default false,
+     *   justificativa text,
+     *   status text default 'Pendente',
+     *   solicitado_por text,
+     *   solicitado_por_id uuid,
+     *   solicitado_por_usuario text,
+     *   aprovado_em timestamptz,
+     *   aprovado_por text,
+     *   aprovado_por_id uuid,
+     *   recusado_em timestamptz,
+     *   recusado_por text,
+     *   recusado_por_id uuid,
+     *   recusa_motivo text
+     * );
+     *
+     * create table reservations (
+     *   id uuid primary key default gen_random_uuid(),
+     *   created_at timestamptz default now(),
+     *   solicitante text,
+     *   motorista text,
+     *   destino text,
+     *   area text,
+     *   data_saida date,
+     *   hora_saida time,
+     *   retorno_previsto timestamptz,
+     *   vehicle_id uuid,
+     *   vehicle_label text,
+     *   aprovador_id uuid,
+     *   aprovador_nome text,
+     *   prioridade text,
+     *   justificativa text,
+     *   status text default 'Pendente',
+     *   aprovado_em timestamptz,
+     *   aprovado_por text,
+     *   aprovado_por_id uuid,
+     *   aprovado_usuario text,
+     *   aprovado_area text,
+     *   recusado_em timestamptz,
+     *   recusado_por text,
+     *   recusa_motivo text,
+     *   saida_em timestamptz,
+     *   retorno_em timestamptz,
+     *   km_saida numeric,
+     *   km_retorno numeric,
+     *   combustivel_saida text,
+     *   combustivel_retorno text,
+     *   checklist_saida jsonb default '[]',
+     *   foto_saida text,
+     *   assinatura_motorista_saida text,
+     *   obs_saida text,
+     *   obs_retorno text,
+     *   porteiro_saida text,
+     *   porteiro_saida_id uuid,
+     *   porteiro_saida_usuario text,
+     *   porteiro_retorno text,
+     *   porteiro_retorno_id uuid,
+     *   porteiro_retorno_usuario text,
+     *   motorista_confirmou text,
+     *   cancelado_em timestamptz,
+     *   cancelado_por text,
+     *   cancelado_por_id uuid,
+     *   cancelado_motivo text
+     * );
+     *
+     * INSERT EXEMPLO:
+     * insert into vehicles (placa, modelo, status) values
+     * ('ADM-001', 'Hilux', 'Disponível'),
+     * ('ADM-002', 'Corolla', 'Disponível'),
+     * ('ADM-003', 'Spin', 'Disponível');
+     *
+     * insert into managers (nome, usuario, senha, perfil, area, pode_aprovar, aprovador_aprovado, pode_cadastrar_gestor) values
+     * ('Administrador ADM', 'admin', '1234', 'admin', 'Segurança Patrimonial', false, false, true),
+     * ('Isacc Lopes Santos', 'isacc', '1234', 'gestor', 'ADM', true, true, false),
+     * ('Portaria ADM', 'portaria', '1234', 'portaria', 'Portaria', false, false, false);
+     *
+     * IMPORTANTE DE SEGURANÇA:
+     * Para teste rápido, você pode deixar RLS desligado.
+     * Para produção, use Supabase Auth + RLS e grave approved_by = auth.uid().
+     * Front-end puro não impede 100% alguém técnico de burlar o nome do aprovador.
+     * A proteção verdadeira precisa estar na regra do banco.
+     ************************************************************/
+  </script>
+</body>
+</html>
