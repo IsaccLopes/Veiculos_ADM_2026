@@ -743,6 +743,69 @@
 
 
 
+
+    .gate-module-menu {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .gate-menu-btn {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--adm-blue);
+      border-radius: 18px;
+      padding: 16px 12px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(0, 43, 127, .06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      min-height: 88px;
+      transition: .2s ease;
+    }
+
+    .gate-menu-btn:hover,
+    .gate-menu-btn.active {
+      background: var(--adm-blue);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(0, 43, 127, .18);
+    }
+
+    .gate-menu-btn span {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .gate-module {
+      display: none;
+    }
+
+    .gate-module.active {
+      display: block;
+    }
+
+    .module-layout {
+      display: grid;
+      grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 980px) {
+      .gate-module-menu {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .module-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .portaria-tabs {
       display: flex;
       gap: 10px;
@@ -1895,7 +1958,7 @@
         <div class="dashboard-header">
           <div>
             <h2>Controle de portaria</h2>
-            <p>Liberação de saída, checklist do veículo e registro de retorno.</p>
+            <p>Escolha um módulo para registrar e consultar as informações da portaria.</p>
           </div>
           <div class="actions">
             <button class="btn btn-primary" onclick="loadAll()">Atualizar</button>
@@ -1903,203 +1966,248 @@
           </div>
         </div>
 
-        <div class="metrics" id="gateMetrics"></div>
-
-        <div class="gate-alert" id="gateAlert">
-          <div>
-            <strong id="gateAlertTitle">Atenção na portaria</strong>
-            <small id="gateAlertText">Existe uma ação pendente.</small>
-          </div>
-          <button class="sound-toggle" onclick="ackGateAlert()">🔇 Silenciar</button>
-        </div>
-
-        <div class="split">
-          <div class="panel">
-            <div class="form-title">
-              <div>
-                <h3>Veículos aguardando liberação</h3>
-                <p class="subtitle" style="font-size:14px">Clique em “Liberar saída” para preencher o checklist online.</p>
-              </div>
-            </div>
-            <div class="status-board" id="gateBoard"></div>
-          </div>
-
-          <div class="panel">
-            <div class="form-title">
-              <div>
-                <h3>Registrar retorno manual</h3>
-                <p class="subtitle" style="font-size:14px">Use quando o veículo voltar para encerrar a reserva.</p>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="returnReservation">Reserva em uso</label>
-              <select class="select" id="returnReservation"></select>
-            </div>
-
-            <div id="returnChecklistArea">
-            <div class="grid-2">
-              <div class="field">
-                <label for="returnKm">KM retorno</label>
-                <input class="input" id="returnKm" type="number" min="0" placeholder="Ex.: 15000" />
-              </div>
-              <div class="field">
-                <label for="returnFuel">Combustível retorno</label>
-                <select class="select" id="returnFuel">
-                  <option>Cheio</option>
-                  <option>3/4</option>
-                  <option>1/2</option>
-                  <option>1/4</option>
-                  <option>Reserva</option>
-                </select>
-              </div>
-            </div>
-
-            <label style="display:block;font-weight:900;color:var(--adm-blue);margin:8px 0 10px">Checklist de retorno</label>
-            <div class="return-checklist">
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Sem novas avarias"> Sem novas avarias</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Pneus conferidos"> Pneus conferidos</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Faróis e setas ok"> Faróis e setas ok</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Vidros e retrovisores ok"> Vidros e retrovisores ok</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Documentação/cartão ok"> Documentação/cartão ok</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Limpeza conferida"> Limpeza conferida</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="Combustível conferido"> Combustível conferido</label>
-              <label class="check-item"><input type="checkbox" name="ckReturn" value="KM conferido"> KM conferido</label>
-            </div>
-
-            <div class="field">
-              <label for="returnVehiclePhoto">Foto do veículo no retorno</label>
-              <input class="input" id="returnVehiclePhoto" type="file" accept="image/*" capture="environment" onchange="handleReturnPhoto(event)" />
-              <div class="photo-preview" id="returnPhotoPreview">📷 Tire ou selecione uma foto do veículo no retorno.</div>
-            </div>
-
-            <div class="field">
-              <label for="returnObs">Observação do retorno</label>
-              <textarea class="textarea" id="returnObs" placeholder="Ex.: veículo voltou sem avarias"></textarea>
-            </div>
-
-            <button class="btn btn-green" style="width:100%" onclick="finishReturn()">✅ Confirmar retorno</button>
-            </div>
-            <div class="empty" id="noReturnVehicleMessage">Nenhum veículo em uso no momento. O checklist de retorno aparecerá quando houver veículo para retornar.</div>
-          </div>
-        </div>
-
-
         <div class="panel">
-          <div class="form-title">
+          <div class="gate-module-menu">
+            <button class="gate-menu-btn active" data-gate-module="vehicles" onclick="setPortariaModule('vehicles')"><span>🚗</span>Veículos</button>
+            <button class="gate-menu-btn" data-gate-module="visitors" onclick="setPortariaModule('visitors')"><span>👥</span>Visitantes</button>
+            <button class="gate-menu-btn" data-gate-module="cards" onclick="setPortariaModule('cards')"><span>🪪</span>Cartões</button>
+            <button class="gate-menu-btn" data-gate-module="lost" onclick="setPortariaModule('lost')"><span>📦</span>Achados</button>
+            <button class="gate-menu-btn" data-gate-module="incidents" onclick="setPortariaModule('incidents')"><span>⚠️</span>Desvios</button>
+            <button class="gate-menu-btn" data-gate-module="notes" onclick="setPortariaModule('notes')"><span>📘</span>Livro</button>
+          </div>
+        </div>
+
+        <div class="gate-module active" id="gate-module-vehicles">
+          <div class="metrics" id="gateMetrics"></div>
+
+          <div class="gate-alert" id="gateAlert">
             <div>
-              <h3>Módulos da portaria</h3>
-              <p class="subtitle" style="font-size:14px">
-                Registros operacionais da segurança patrimonial: visitantes, cartões, achados e ocorrências.
-              </p>
+              <strong id="gateAlertTitle">Atenção na portaria</strong>
+              <small id="gateAlertText">Existe uma ação pendente.</small>
+            </div>
+            <button class="sound-toggle" onclick="ackGateAlert()">🔇 Silenciar</button>
+          </div>
+
+          <div class="split">
+            <div class="panel">
+              <div class="form-title">
+                <div>
+                  <h3>Veículos aguardando liberação</h3>
+                  <p class="subtitle" style="font-size:14px">Clique em “Liberar saída” para preencher o checklist online.</p>
+                </div>
+              </div>
+              <div class="status-board" id="gateBoard"></div>
+            </div>
+
+            <div class="panel">
+              <div class="form-title">
+                <div>
+                  <h3>Registrar retorno</h3>
+                  <p class="subtitle" style="font-size:14px">O checklist de retorno aparece somente quando existir veículo em uso.</p>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="returnReservation">Reserva em uso</label>
+                <select class="select" id="returnReservation"></select>
+              </div>
+
+              <div id="returnChecklistArea">
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="returnKm">KM retorno</label>
+                    <input class="input" id="returnKm" type="number" min="0" placeholder="Ex.: 15000" />
+                  </div>
+                  <div class="field">
+                    <label for="returnFuel">Combustível retorno</label>
+                    <select class="select" id="returnFuel">
+                      <option>Cheio</option>
+                      <option>3/4</option>
+                      <option>1/2</option>
+                      <option>1/4</option>
+                      <option>Reserva</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label style="display:block;font-weight:900;color:var(--adm-blue);margin:8px 0 10px">Checklist de retorno</label>
+                <div class="return-checklist">
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Sem novas avarias"> Sem novas avarias</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Pneus conferidos"> Pneus conferidos</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Faróis e setas ok"> Faróis e setas ok</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Vidros e retrovisores ok"> Vidros e retrovisores ok</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Documentação/cartão ok"> Documentação/cartão ok</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Limpeza conferida"> Limpeza conferida</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="Combustível conferido"> Combustível conferido</label>
+                  <label class="check-item"><input type="checkbox" name="ckReturn" value="KM conferido"> KM conferido</label>
+                </div>
+
+                <div class="field">
+                  <label for="returnVehiclePhoto">Foto do veículo no retorno</label>
+                  <input class="input" id="returnVehiclePhoto" type="file" accept="image/*" capture="environment" onchange="handleReturnPhoto(event)" />
+                  <div class="photo-preview" id="returnPhotoPreview">📷 Tire ou selecione uma foto do veículo no retorno.</div>
+                </div>
+
+                <div class="field">
+                  <label for="returnObs">Observação do retorno</label>
+                  <textarea class="textarea" id="returnObs" placeholder="Ex.: veículo voltou sem avarias"></textarea>
+                </div>
+
+                <button class="btn btn-green" style="width:100%" onclick="finishReturn()">✅ Confirmar retorno</button>
+              </div>
+
+              <div class="empty" id="noReturnVehicleMessage">Nenhum veículo em uso no momento. O checklist de retorno aparecerá quando houver veículo para retornar.</div>
             </div>
           </div>
 
-          <div class="portaria-tabs">
-            <button class="tab active" data-portaria-tab="visitors" onclick="setPortariaModule('visitors')">Visitantes</button>
-            <button class="tab" data-portaria-tab="cards" onclick="setPortariaModule('cards')">Cartões</button>
-            <button class="tab" data-portaria-tab="lost" onclick="setPortariaModule('lost')">Achados e perdidos</button>
-            <button class="tab" data-portaria-tab="incidents" onclick="setPortariaModule('incidents')">Desvios / ocorrências</button>
-            <button class="tab" data-portaria-tab="notes" onclick="setPortariaModule('notes')">Livro da portaria</button>
-          </div>
-
-          <div class="portaria-module active" id="module-visitors">
-            <form id="visitorForm">
-              <div class="grid-2">
-                <div class="field"><label for="visitorName">Nome do visitante</label><input class="input" id="visitorName" required placeholder="Nome completo" /></div>
-                <div class="field"><label for="visitorDocument">Documento / CPF</label><input class="input" id="visitorDocument" placeholder="Opcional" /></div>
-                <div class="field"><label for="visitorCompany">Empresa</label><input class="input" id="visitorCompany" placeholder="Empresa do visitante" /></div>
-                <div class="field"><label for="visitorResponsible">Responsável ADM</label><input class="input" id="visitorResponsible" required placeholder="Quem vai receber o visitante" /></div>
-                <div class="field"><label for="visitorCardDelivered">Cartão entregue?</label><select class="select" id="visitorCardDelivered"><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
-                <div class="field"><label for="visitorCardNumber">Número do cartão</label><input class="input" id="visitorCardNumber" placeholder="Ex.: V-010" /></div>
-              </div>
-              <div class="field"><label for="visitorReason">Motivo da visita</label><textarea class="textarea" id="visitorReason" placeholder="Ex.: reunião, manutenção, entrega..."></textarea></div>
-              <button class="btn btn-primary" type="submit">Registrar entrada</button>
-            </form>
-            <div class="table-tools" style="margin-top:18px"><strong>Visitantes dentro da unidade</strong></div>
-            <div class="compact-list" id="activeVisitorsList"></div>
-          </div>
-
-          <div class="portaria-module" id="module-cards">
-            <form id="cardEventForm">
-              <div class="grid-2">
-                <div class="field"><label for="cardEventType">Tipo de ocorrência</label><select class="select" id="cardEventType"><option value="Perda de cartão">Perda de cartão</option><option value="Entrega de cartão novo">Entrega de cartão novo</option><option value="Devolução de cartão">Devolução de cartão</option><option value="Cartão danificado">Cartão danificado</option></select></div>
-                <div class="field"><label for="cardPersonName">Nome da pessoa</label><input class="input" id="cardPersonName" required placeholder="Colaborador, visitante ou terceiro" /></div>
-                <div class="field"><label for="cardOldNumber">Cartão antigo / perdido</label><input class="input" id="cardOldNumber" placeholder="Ex.: C-018" /></div>
-                <div class="field"><label for="cardNewNumber">Cartão novo entregue</label><input class="input" id="cardNewNumber" placeholder="Ex.: C-022" /></div>
-              </div>
-              <div class="field"><label for="cardEventObs">Observação</label><textarea class="textarea" id="cardEventObs" placeholder="Detalhe o ocorrido"></textarea></div>
-              <button class="btn btn-primary" type="submit">Registrar ocorrência de cartão</button>
-            </form>
-          </div>
-
-          <div class="portaria-module" id="module-lost">
-            <form id="lostFoundForm">
-              <div class="grid-2">
-                <div class="field"><label for="lostType">Tipo</label><select class="select" id="lostType"><option value="Achado">Achado</option><option value="Perdido">Perdido</option><option value="Devolvido">Devolvido</option></select></div>
-                <div class="field"><label for="lostLocation">Local</label><input class="input" id="lostLocation" placeholder="Ex.: portaria, estacionamento, recepção" /></div>
-                <div class="field"><label for="lostOwner">Pessoa relacionada</label><input class="input" id="lostOwner" placeholder="Quem perdeu/retirou, se souber" /></div>
-                <div class="field"><label for="lostStatus">Status</label><select class="select" id="lostStatus"><option value="Guardado na portaria">Guardado na portaria</option><option value="Entregue ao responsável">Entregue ao responsável</option><option value="Em apuração">Em apuração</option></select></div>
-              </div>
-              <div class="field"><label for="lostDescription">Descrição do objeto</label><textarea class="textarea" id="lostDescription" required placeholder="Ex.: crachá, chave, celular, mochila..."></textarea></div>
-              <div class="field"><label for="lostPhoto">Foto do objeto</label><input class="input" id="lostPhoto" type="file" accept="image/*" capture="environment" onchange="handleLostFoundPhoto(event)" /><div class="mini-preview" id="lostPhotoPreview">📷 Foto opcional do objeto</div></div>
-              <button class="btn btn-primary" type="submit">Registrar achado/perdido</button>
-            </form>
-          </div>
-
-          <div class="portaria-module" id="module-incidents">
-            <form id="securityIncidentForm">
-              <div class="grid-2">
-                <div class="field"><label for="incidentType">Tipo de desvio</label><select class="select" id="incidentType"><option value="Conduta inadequada">Conduta inadequada</option><option value="Acesso não autorizado">Acesso não autorizado</option><option value="Conflito verbal">Conflito verbal</option><option value="Dano patrimonial">Dano patrimonial</option><option value="Procedimento descumprido">Procedimento descumprido</option><option value="Outro">Outro</option></select></div>
-                <div class="field"><label for="incidentSeverity">Gravidade</label><select class="select" id="incidentSeverity"><option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option><option value="Crítica">Crítica</option></select></div>
-                <div class="field"><label for="incidentPerson">Pessoa/envolvido</label><input class="input" id="incidentPerson" placeholder="Ex.: motorista, visitante, terceiro..." /></div>
-                <div class="field"><label for="incidentArea">Local / área</label><input class="input" id="incidentArea" placeholder="Ex.: portaria, balança, estacionamento..." /></div>
-              </div>
-              <div class="field"><label for="incidentDescription">Descrição do ocorrido</label><textarea class="textarea" id="incidentDescription" required placeholder="Descreva com clareza o que aconteceu"></textarea></div>
-              <div class="field"><label for="incidentAction">Ação tomada</label><textarea class="textarea" id="incidentAction" placeholder="Ex.: orientado, bloqueado acesso, comunicado gestor..."></textarea></div>
-              <div class="field"><label for="incidentPhoto">Foto/evidência</label><input class="input" id="incidentPhoto" type="file" accept="image/*" capture="environment" onchange="handleIncidentPhoto(event)" /><div class="mini-preview" id="incidentPhotoPreview">📷 Foto opcional da evidência</div></div>
-              <button class="btn btn-primary" type="submit">Registrar desvio / ocorrência</button>
-            </form>
-          </div>
-
-          <div class="portaria-module" id="module-notes">
-            <form id="gateNoteForm">
-              <div class="grid-2">
-                <div class="field"><label for="gateShift">Turno</label><select class="select" id="gateShift"><option value="Diurno">Diurno</option><option value="Noturno">Noturno</option><option value="Troca de turno">Troca de turno</option></select></div>
-                <div class="field"><label for="gateNoteType">Tipo</label><select class="select" id="gateNoteType"><option value="Observação de plantão">Observação de plantão</option><option value="Recado para próximo turno">Recado para próximo turno</option><option value="Orientação recebida">Orientação recebida</option><option value="Anormalidade operacional">Anormalidade operacional</option></select></div>
-              </div>
-              <div class="field"><label for="gateNoteText">Registro</label><textarea class="textarea" id="gateNoteText" required placeholder="Descreva a informação importante para o controle da portaria"></textarea></div>
-              <button class="btn btn-primary" type="submit">Registrar no livro da portaria</button>
-            </form>
+          <div class="panel">
+            <div class="table-tools">
+              <strong>Histórico de veículos</strong>
+              <input class="input search-box" id="gateSearch" placeholder="Buscar..." oninput="renderGateHistory()" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Motorista</th>
+                    <th>Veículo</th>
+                    <th>Destino</th>
+                    <th>Status</th>
+                    <th>Aprovado por</th>
+                    <th>Saída</th>
+                    <th>Agente saída</th>
+                    <th>Retorno</th>
+                    <th>Agente retorno</th>
+                  </tr>
+                </thead>
+                <tbody id="gateHistory"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="table-tools">
-            <strong>Histórico da portaria</strong>
-            <input class="input search-box" id="gateSearch" placeholder="Buscar..." oninput="renderGateHistory()" />
+        <div class="gate-module" id="gate-module-visitors">
+          <div class="module-layout">
+            <div class="panel">
+              <div class="form-title"><div><h3>Registro de visitantes</h3><p class="subtitle" style="font-size:14px">A entrada é registrada no momento do cadastro.</p></div></div>
+              <form id="visitorForm">
+                <div class="grid-2">
+                  <div class="field"><label for="visitorName">Nome do visitante</label><input class="input" id="visitorName" required placeholder="Nome completo" /></div>
+                  <div class="field"><label for="visitorDocument">Documento / CPF</label><input class="input" id="visitorDocument" placeholder="Opcional" /></div>
+                  <div class="field"><label for="visitorCompany">Empresa</label><input class="input" id="visitorCompany" placeholder="Empresa do visitante" /></div>
+                  <div class="field"><label for="visitorResponsible">Responsável ADM</label><input class="input" id="visitorResponsible" required placeholder="Quem vai receber o visitante" /></div>
+                  <div class="field"><label for="visitorCardDelivered">Cartão entregue?</label><select class="select" id="visitorCardDelivered"><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+                  <div class="field"><label for="visitorCardNumber">Número do cartão</label><input class="input" id="visitorCardNumber" placeholder="Ex.: V-010" /></div>
+                </div>
+                <div class="field"><label for="visitorReason">Motivo da visita</label><textarea class="textarea" id="visitorReason" placeholder="Ex.: reunião, manutenção, entrega..."></textarea></div>
+                <button class="btn btn-primary" type="submit">Registrar entrada</button>
+              </form>
+              <div class="table-tools" style="margin-top:18px"><strong>Visitantes dentro da unidade</strong></div>
+              <div class="compact-list" id="activeVisitorsList"></div>
+            </div>
+
+            <div class="panel">
+              <div class="table-tools"><strong>Histórico de visitantes</strong></div>
+              <div class="table-wrap"><table><thead><tr><th>Entrada</th><th>Visitante</th><th>Empresa</th><th>Responsável</th><th>Cartão</th><th>Saída</th><th>Ação</th></tr></thead><tbody id="visitorHistory"></tbody></table></div>
+            </div>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data/Hora</th>
-                  <th>Motorista</th>
-                  <th>Veículo</th>
-                  <th>Destino</th>
-                  <th>Status</th>
-                  <th>Aprovado por</th>
-                  <th>Saída</th>
-                  <th>Agente saída</th>
-                  <th>Retorno</th>
-                  <th>Agente retorno</th>
-                </tr>
-              </thead>
-              <tbody id="gateHistory"></tbody>
-            </table>
+        </div>
+
+        <div class="gate-module" id="gate-module-cards">
+          <div class="module-layout">
+            <div class="panel">
+              <div class="form-title"><div><h3>Controle de cartões</h3><p class="subtitle" style="font-size:14px">Registre perda, devolução, dano ou entrega de cartão novo.</p></div></div>
+              <form id="cardEventForm">
+                <div class="grid-2">
+                  <div class="field"><label for="cardEventType">Tipo de ocorrência</label><select class="select" id="cardEventType"><option value="Perda de cartão">Perda de cartão</option><option value="Entrega de cartão novo">Entrega de cartão novo</option><option value="Devolução de cartão">Devolução de cartão</option><option value="Cartão danificado">Cartão danificado</option></select></div>
+                  <div class="field"><label for="cardPersonName">Nome da pessoa</label><input class="input" id="cardPersonName" required placeholder="Colaborador, visitante ou terceiro" /></div>
+                  <div class="field"><label for="cardOldNumber">Cartão antigo / perdido</label><input class="input" id="cardOldNumber" placeholder="Ex.: C-018" /></div>
+                  <div class="field"><label for="cardNewNumber">Cartão novo entregue</label><input class="input" id="cardNewNumber" placeholder="Ex.: C-022" /></div>
+                </div>
+                <div class="field"><label for="cardEventObs">Observação</label><textarea class="textarea" id="cardEventObs" placeholder="Detalhe o ocorrido"></textarea></div>
+                <button class="btn btn-primary" type="submit">Registrar ocorrência de cartão</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="table-tools"><strong>Histórico de cartões</strong></div>
+              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Pessoa</th><th>Cartão antigo</th><th>Cartão novo</th><th>Agente</th></tr></thead><tbody id="cardEventsHistory"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gate-module" id="gate-module-lost">
+          <div class="module-layout">
+            <div class="panel">
+              <div class="form-title"><div><h3>Achados e perdidos</h3><p class="subtitle" style="font-size:14px">Registre objetos encontrados, perdidos ou devolvidos.</p></div></div>
+              <form id="lostFoundForm">
+                <div class="grid-2">
+                  <div class="field"><label for="lostType">Tipo</label><select class="select" id="lostType"><option value="Achado">Achado</option><option value="Perdido">Perdido</option><option value="Devolvido">Devolvido</option></select></div>
+                  <div class="field"><label for="lostLocation">Local</label><input class="input" id="lostLocation" placeholder="Ex.: portaria, estacionamento, recepção" /></div>
+                  <div class="field"><label for="lostOwner">Pessoa relacionada</label><input class="input" id="lostOwner" placeholder="Quem perdeu/retirou, se souber" /></div>
+                  <div class="field"><label for="lostStatus">Status</label><select class="select" id="lostStatus"><option value="Guardado na portaria">Guardado na portaria</option><option value="Entregue ao responsável">Entregue ao responsável</option><option value="Em apuração">Em apuração</option></select></div>
+                </div>
+                <div class="field"><label for="lostDescription">Descrição do objeto</label><textarea class="textarea" id="lostDescription" required placeholder="Ex.: crachá, chave, celular, mochila..."></textarea></div>
+                <div class="field"><label for="lostPhoto">Foto do objeto</label><input class="input" id="lostPhoto" type="file" accept="image/*" capture="environment" onchange="handleLostFoundPhoto(event)" /><div class="mini-preview" id="lostPhotoPreview">📷 Foto opcional do objeto</div></div>
+                <button class="btn btn-primary" type="submit">Registrar achado/perdido</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="table-tools"><strong>Histórico de achados/perdidos</strong></div>
+              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Local</th><th>Status</th><th>Foto</th></tr></thead><tbody id="lostFoundHistory"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gate-module" id="gate-module-incidents">
+          <div class="module-layout">
+            <div class="panel">
+              <div class="form-title"><div><h3>Desvios / ocorrências</h3><p class="subtitle" style="font-size:14px">Registre desvios de segurança patrimonial e ações tomadas.</p></div></div>
+              <form id="securityIncidentForm">
+                <div class="grid-2">
+                  <div class="field"><label for="incidentType">Tipo de desvio</label><select class="select" id="incidentType"><option value="Conduta inadequada">Conduta inadequada</option><option value="Acesso não autorizado">Acesso não autorizado</option><option value="Conflito verbal">Conflito verbal</option><option value="Dano patrimonial">Dano patrimonial</option><option value="Procedimento descumprido">Procedimento descumprido</option><option value="Outro">Outro</option></select></div>
+                  <div class="field"><label for="incidentSeverity">Gravidade</label><select class="select" id="incidentSeverity"><option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option><option value="Crítica">Crítica</option></select></div>
+                  <div class="field"><label for="incidentPerson">Pessoa/envolvido</label><input class="input" id="incidentPerson" placeholder="Ex.: motorista, visitante, terceiro..." /></div>
+                  <div class="field"><label for="incidentArea">Local / área</label><input class="input" id="incidentArea" placeholder="Ex.: portaria, balança, estacionamento..." /></div>
+                </div>
+                <div class="field"><label for="incidentDescription">Descrição do ocorrido</label><textarea class="textarea" id="incidentDescription" required placeholder="Descreva com clareza o que aconteceu"></textarea></div>
+                <div class="field"><label for="incidentAction">Ação tomada</label><textarea class="textarea" id="incidentAction" placeholder="Ex.: orientado, bloqueado acesso, comunicado gestor..."></textarea></div>
+                <div class="field"><label for="incidentPhoto">Foto/evidência</label><input class="input" id="incidentPhoto" type="file" accept="image/*" capture="environment" onchange="handleIncidentPhoto(event)" /><div class="mini-preview" id="incidentPhotoPreview">📷 Foto opcional da evidência</div></div>
+                <button class="btn btn-primary" type="submit">Registrar desvio / ocorrência</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="table-tools"><strong>Histórico de desvios/ocorrências</strong></div>
+              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Envolvido</th><th>Descrição</th><th>Foto</th></tr></thead><tbody id="incidentsHistory"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gate-module" id="gate-module-notes">
+          <div class="module-layout">
+            <div class="panel">
+              <div class="form-title"><div><h3>Livro da portaria</h3><p class="subtitle" style="font-size:14px">Registre informações importantes para o turno e passagem de serviço.</p></div></div>
+              <form id="gateNoteForm">
+                <div class="grid-2">
+                  <div class="field"><label for="gateShift">Turno</label><select class="select" id="gateShift"><option value="Diurno">Diurno</option><option value="Noturno">Noturno</option><option value="Troca de turno">Troca de turno</option></select></div>
+                  <div class="field"><label for="gateNoteType">Tipo</label><select class="select" id="gateNoteType"><option value="Observação de plantão">Observação de plantão</option><option value="Recado para próximo turno">Recado para próximo turno</option><option value="Orientação recebida">Orientação recebida</option><option value="Anormalidade operacional">Anormalidade operacional</option></select></div>
+                </div>
+                <div class="field"><label for="gateNoteText">Registro</label><textarea class="textarea" id="gateNoteText" required placeholder="Descreva a informação importante para o controle da portaria"></textarea></div>
+                <button class="btn btn-primary" type="submit">Registrar no livro da portaria</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="table-tools"><strong>Histórico do livro da portaria</strong></div>
+              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Turno</th><th>Tipo</th><th>Registro</th><th>Agente</th></tr></thead><tbody id="gateNotesHistory"></tbody></table></div>
+            </div>
           </div>
         </div>
       </section>
+
     </main>
 
     <div class="footer-sign">🛡️ Controle de Portaria</div>
@@ -2700,6 +2808,7 @@
       renderAdminReservations();
       renderAdminVehicles();
       renderActiveVisitors();
+      renderGateOperationalHistories();
       renderAdminTrace();
       checkVehicleAvailability();
       checkGateAlerts();
@@ -3307,11 +3416,15 @@
 
     function setPortariaModule(module) {
       portariaModule = module;
-      document.querySelectorAll("[data-portaria-tab]").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.portariaTab === module);
+
+      document.querySelectorAll("[data-gate-module]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.gateModule === module);
       });
-      document.querySelectorAll(".portaria-module").forEach(box => box.classList.remove("active"));
-      document.getElementById(`module-${module}`)?.classList.add("active");
+
+      document.querySelectorAll(".gate-module").forEach(box => box.classList.remove("active"));
+      document.getElementById(`gate-module-${module}`)?.classList.add("active");
+
+      renderGateOperationalHistories();
     }
 
     async function createVisitorEntry(event) {
@@ -3348,6 +3461,7 @@
         await insertPortariaRecord("visitor_logs", "adm_visitors", "visitors", record);
         document.getElementById("visitorForm").reset();
         renderActiveVisitors();
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Entrada de visitante registrada.");
       } catch (err) {
@@ -3372,6 +3486,7 @@
           exit_by_usuario: currentUser.usuario
         });
         renderActiveVisitors();
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Saída do visitante registrada.");
       } catch (err) {
@@ -3421,6 +3536,7 @@
       try {
         await insertPortariaRecord("card_events", "adm_card_events", "cardEvents", record);
         document.getElementById("cardEventForm").reset();
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Ocorrência de cartão registrada.");
       } catch (err) {
@@ -3484,6 +3600,7 @@
         document.getElementById("lostFoundForm").reset();
         document.getElementById("lostPhotoPreview").innerHTML = "📷 Foto opcional do objeto";
         lostFoundPhotoData = "";
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Achado/perdido registrado.");
       } catch (err) {
@@ -3517,6 +3634,7 @@
         document.getElementById("securityIncidentForm").reset();
         document.getElementById("incidentPhotoPreview").innerHTML = "📷 Foto opcional da evidência";
         incidentPhotoData = "";
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Desvio/ocorrência registrado.");
       } catch (err) {
@@ -3543,6 +3661,7 @@
       try {
         await insertPortariaRecord("gate_notes", "adm_gate_notes", "gateNotes", record);
         document.getElementById("gateNoteForm").reset();
+        renderGateOperationalHistories();
         renderAdminTrace();
         toast("Registro incluído no livro da portaria.");
       } catch (err) {
@@ -3640,6 +3759,96 @@
       const body = document.getElementById("detailsBody");
       body.innerHTML = `<div class="media-card"><h4>Imagem registrada</h4><img src="${src}" alt="Imagem registrada"></div>`;
       document.getElementById("detailsModal").classList.add("active");
+    }
+
+
+
+    function renderGateOperationalHistories() {
+      renderVisitorHistory();
+      renderCardEventsHistory();
+      renderLostFoundHistory();
+      renderIncidentsHistory();
+      renderGateNotesHistory();
+    }
+
+    function renderVisitorHistory() {
+      const tbody = document.getElementById("visitorHistory");
+      if (!tbody) return;
+
+      tbody.innerHTML = visitors.length ? visitors.map(v => `
+        <tr>
+          <td>${formatDate(v.entry_time || v.created_at)}</td>
+          <td><strong>${escapeHtml(v.visitor_name || "-")}</strong></td>
+          <td>${escapeHtml(v.company || "-")}</td>
+          <td>${escapeHtml(v.responsible || "-")}</td>
+          <td>${escapeHtml(v.card_delivered || "-")} ${v.card_number ? "• " + escapeHtml(v.card_number) : ""}</td>
+          <td>${v.exit_time ? formatDate(v.exit_time) : '<span class="badge warning">Dentro</span>'}</td>
+          <td>${!v.exit_time ? `<button class="mini-btn green" onclick="closeVisitorExit('${v.id}')">Saída</button>` : "-"}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="7"><div class="empty">Nenhum visitante registrado.</div></td></tr>`;
+    }
+
+    function renderCardEventsHistory() {
+      const tbody = document.getElementById("cardEventsHistory");
+      if (!tbody) return;
+
+      tbody.innerHTML = cardEvents.length ? cardEvents.map(c => `
+        <tr>
+          <td>${formatDate(c.created_at)}</td>
+          <td>${escapeHtml(c.event_type || "-")}</td>
+          <td><strong>${escapeHtml(c.person_name || "-")}</strong></td>
+          <td>${escapeHtml(c.old_card_number || "-")}</td>
+          <td>${escapeHtml(c.new_card_number || "-")}</td>
+          <td>${escapeHtml(c.created_by || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6"><div class="empty">Nenhuma ocorrência de cartão registrada.</div></td></tr>`;
+    }
+
+    function renderLostFoundHistory() {
+      const tbody = document.getElementById("lostFoundHistory");
+      if (!tbody) return;
+
+      tbody.innerHTML = lostFound.length ? lostFound.map(l => `
+        <tr>
+          <td>${formatDate(l.created_at)}</td>
+          <td>${escapeHtml(l.record_type || "-")}</td>
+          <td><strong>${escapeHtml(l.description || "-")}</strong></td>
+          <td>${escapeHtml(l.location || "-")}</td>
+          <td>${escapeHtml(l.status || "-")}</td>
+          <td>${l.photo ? `<button class="mini-btn" onclick="openImagePreview('${l.id}', 'lost')">Ver</button>` : "-"}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6"><div class="empty">Nenhum achado/perdido registrado.</div></td></tr>`;
+    }
+
+    function renderIncidentsHistory() {
+      const tbody = document.getElementById("incidentsHistory");
+      if (!tbody) return;
+
+      tbody.innerHTML = securityIncidents.length ? securityIncidents.map(i => `
+        <tr>
+          <td>${formatDate(i.created_at)}</td>
+          <td>${escapeHtml(i.incident_type || "-")}</td>
+          <td>${escapeHtml(i.severity || "-")}</td>
+          <td>${escapeHtml(i.person_involved || "-")}</td>
+          <td><strong>${escapeHtml(i.description || "-")}</strong></td>
+          <td>${i.photo ? `<button class="mini-btn" onclick="openImagePreview('${i.id}', 'incident')">Ver</button>` : "-"}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6"><div class="empty">Nenhum desvio/ocorrência registrado.</div></td></tr>`;
+    }
+
+    function renderGateNotesHistory() {
+      const tbody = document.getElementById("gateNotesHistory");
+      if (!tbody) return;
+
+      tbody.innerHTML = gateNotes.length ? gateNotes.map(n => `
+        <tr>
+          <td>${formatDate(n.created_at)}</td>
+          <td>${escapeHtml(n.shift || "-")}</td>
+          <td>${escapeHtml(n.note_type || "-")}</td>
+          <td><strong>${escapeHtml(n.note || "-")}</strong></td>
+          <td>${escapeHtml(n.created_by || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="5"><div class="empty">Nenhum registro no livro da portaria.</div></td></tr>`;
     }
 
 
