@@ -741,6 +741,11 @@
     }
 
 
+
+    .hidden-area {
+      display: none !important;
+    }
+
     .details-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -1838,6 +1843,7 @@
               <select class="select" id="returnReservation"></select>
             </div>
 
+            <div id="returnChecklistArea">
             <div class="grid-2">
               <div class="field">
                 <label for="returnKm">KM retorno</label>
@@ -1879,6 +1885,8 @@
             </div>
 
             <button class="btn btn-green" style="width:100%" onclick="finishReturn()">✅ Confirmar retorno</button>
+            </div>
+            <div class="empty" id="noReturnVehicleMessage">Nenhum veículo em uso no momento. O checklist de retorno aparecerá quando houver veículo para retornar.</div>
           </div>
         </div>
 
@@ -2413,8 +2421,14 @@
 
       const managerSelect = document.getElementById("reqAprovador");
       managerSelect.innerHTML = `<option value="">Selecione o gestor responsável</option>`;
-      managers
-        .filter(m => m.perfil === "gestor" && m.ativo !== false && m.pode_aprovar !== false && m.aprovador_aprovado !== false)
+      const activeApprovers = managers
+        .filter(m => m.perfil === "gestor" && m.ativo !== false && m.pode_aprovar !== false && m.aprovador_aprovado !== false);
+
+      if (activeApprovers.length > 1) {
+        managerSelect.innerHTML += `<option value="__todos__">Todos os gestores aprovadores</option>`;
+      }
+
+      activeApprovers
         .forEach(m => managerSelect.innerHTML += `<option value="${m.id}">${m.nome}${m.area ? " - " + m.area : ""}</option>`);
 
       const returnSelect = document.getElementById("returnReservation");
@@ -2422,6 +2436,13 @@
       returnSelect.innerHTML = inUse.length
         ? inUse.map(r => `<option value="${r.id}">${getVehicleLabel(r.vehicle_id)} | ${r.motorista} | ${formatDateTime(r.data_saida, r.hora_saida)}</option>`).join("")
         : `<option value="">Nenhum veículo em uso</option>`;
+
+      const returnArea = document.getElementById("returnChecklistArea");
+      const noReturnMessage = document.getElementById("noReturnVehicleMessage");
+      if (returnArea && noReturnMessage) {
+        returnArea.classList.toggle("hidden-area", !inUse.length);
+        noReturnMessage.classList.toggle("hidden-area", !!inUse.length);
+      }
     }
 
     function renderEverything() {
@@ -2603,7 +2624,8 @@
 
       const vehicleId = document.getElementById("reqVeiculo").value;
       const managerId = document.getElementById("reqAprovador").value;
-      const responsibleManager = managers.find(m => m.id === managerId);
+      const sendToAllManagers = managerId === "__todos__";
+      const responsibleManager = sendToAllManagers ? null : managers.find(m => m.id === managerId);
 
       if (!managerId) {
         toast("Selecione o gestor responsável pela aprovação.");
@@ -2631,10 +2653,10 @@
         retorno_previsto: document.getElementById("reqRetornoPrevisto").value || null,
         vehicle_id: vehicleId,
         vehicle_label: getVehicleLabel(vehicleId),
-        aprovador_id: managerId,
-        aprovador_nome: getManagerName(managerId),
-        aprovador_usuario: responsibleManager?.usuario || null,
-        aprovador_area: responsibleManager?.area || null,
+        aprovador_id: sendToAllManagers ? null : managerId,
+        aprovador_nome: sendToAllManagers ? "Todos os gestores" : getManagerName(managerId),
+        aprovador_usuario: sendToAllManagers ? "todos" : (responsibleManager?.usuario || null),
+        aprovador_area: sendToAllManagers ? "Todos" : (responsibleManager?.area || null),
         prioridade: document.getElementById("reqPrioridade").value,
         justificativa: document.getElementById("reqJustificativa").value.trim(),
         status: "Pendente",
@@ -2731,6 +2753,7 @@
                 <button class="mini-btn red" onclick="rejectReservation('${r.id}')">Recusar</button>
               ` : ""}
               ${r.status === "Pendente" && !isReservationAssignedToCurrentUser(r) ? `<span class="badge warning">Direcionado para ${escapeHtml(r.aprovador_nome || "-")}</span>` : ""}
+              ${r.status === "Pendente" && isReservationAssignedToCurrentUser(r) && normalizeText(r.aprovador_usuario) === "todos" ? `<span class="badge success">Disponível para todos os gestores</span>` : ""}
               ${currentUser?.perfil === "admin" ? `<button class="mini-btn" onclick="printReservation('${r.id}')">Ver</button>` : ""}
             </div>
           </td>
@@ -2780,7 +2803,8 @@
         `Veículo: ${getVehicleLabel(reservation.vehicle_id) || reservation.vehicle_label}\\n` +
         `Saída: ${formatDateTime(reservation.data_saida, reservation.hora_saida)}\\n` +
         `Retorno previsto: ${formatDate(reservation.retorno_previsto)}\\n\\n` +
-        `Essa aprovação ficará gravada no seu usuário: ${currentUser.nome}.`
+        `Essa aprovação ficará gravada no seu usuário: ${currentUser.nome}.` +
+        (normalizeText(reservation.aprovador_usuario) === "todos" ? `\n\nEssa solicitação foi enviada para todos os gestores; ao aprovar, você assume a aprovação.` : "")
       );
 
       if (!ok) return;
@@ -3916,6 +3940,16 @@
 
     function isReservationAssignedToCurrentUser(r) {
       if (!currentUser || !r) return false;
+
+      const isForAllManagers =
+        normalizeText(r.aprovador_usuario) === "todos" ||
+        normalizeText(r.aprovador_nome) === "todos os gestores";
+
+      if (isForAllManagers) {
+        return currentUser.perfil === "gestor" &&
+          currentUser.pode_aprovar !== false &&
+          currentUser.aprovador_aprovado !== false;
+      }
 
       const sameId = r.aprovador_id && currentUser.id && String(r.aprovador_id) === String(currentUser.id);
       const sameUser = r.aprovador_usuario && currentUser.usuario && normalizeText(r.aprovador_usuario) === normalizeText(currentUser.usuario);
