@@ -742,6 +742,71 @@
 
 
 
+
+    .portaria-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .portaria-module {
+      display: none;
+    }
+
+    .portaria-module.active {
+      display: block;
+    }
+
+    .mini-preview {
+      margin-top: 10px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      min-height: 120px;
+      background: #f8fbff;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 800;
+      overflow: hidden;
+      text-align: center;
+      padding: 10px;
+    }
+
+    .mini-preview img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+    }
+
+    .compact-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .compact-card {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .compact-card strong {
+      color: var(--adm-blue);
+    }
+
+    .compact-card small {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
     .hidden-area {
       display: none !important;
     }
@@ -1648,6 +1713,35 @@
           </div>
         </div>
 
+
+        <div class="panel">
+          <div class="form-title">
+            <div>
+              <h3>Rastreabilidade da portaria</h3>
+              <p class="subtitle" style="font-size:14px">
+                Somente Admin: visitantes, cartões, achados/perdidos, desvios e livro da portaria.
+              </p>
+            </div>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-trace-tab="visitors" onclick="setTraceTab('visitors')">Visitantes</button>
+            <button class="tab" data-trace-tab="cards" onclick="setTraceTab('cards')">Cartões</button>
+            <button class="tab" data-trace-tab="lost" onclick="setTraceTab('lost')">Achados</button>
+            <button class="tab" data-trace-tab="incidents" onclick="setTraceTab('incidents')">Desvios</button>
+            <button class="tab" data-trace-tab="notes" onclick="setTraceTab('notes')">Livro</button>
+          </div>
+          <div class="table-tools">
+            <strong id="traceTitle">Visitantes</strong>
+            <input class="input search-box" id="traceSearch" placeholder="Buscar rastreabilidade..." oninput="renderAdminTrace()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="traceHead"></thead>
+              <tbody id="traceBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="admin-grid">
           <div class="form-card">
             <div class="form-title">
@@ -1887,6 +1981,96 @@
             <button class="btn btn-green" style="width:100%" onclick="finishReturn()">✅ Confirmar retorno</button>
             </div>
             <div class="empty" id="noReturnVehicleMessage">Nenhum veículo em uso no momento. O checklist de retorno aparecerá quando houver veículo para retornar.</div>
+          </div>
+        </div>
+
+
+        <div class="panel">
+          <div class="form-title">
+            <div>
+              <h3>Módulos da portaria</h3>
+              <p class="subtitle" style="font-size:14px">
+                Registros operacionais da segurança patrimonial: visitantes, cartões, achados e ocorrências.
+              </p>
+            </div>
+          </div>
+
+          <div class="portaria-tabs">
+            <button class="tab active" data-portaria-tab="visitors" onclick="setPortariaModule('visitors')">Visitantes</button>
+            <button class="tab" data-portaria-tab="cards" onclick="setPortariaModule('cards')">Cartões</button>
+            <button class="tab" data-portaria-tab="lost" onclick="setPortariaModule('lost')">Achados e perdidos</button>
+            <button class="tab" data-portaria-tab="incidents" onclick="setPortariaModule('incidents')">Desvios / ocorrências</button>
+            <button class="tab" data-portaria-tab="notes" onclick="setPortariaModule('notes')">Livro da portaria</button>
+          </div>
+
+          <div class="portaria-module active" id="module-visitors">
+            <form id="visitorForm">
+              <div class="grid-2">
+                <div class="field"><label for="visitorName">Nome do visitante</label><input class="input" id="visitorName" required placeholder="Nome completo" /></div>
+                <div class="field"><label for="visitorDocument">Documento / CPF</label><input class="input" id="visitorDocument" placeholder="Opcional" /></div>
+                <div class="field"><label for="visitorCompany">Empresa</label><input class="input" id="visitorCompany" placeholder="Empresa do visitante" /></div>
+                <div class="field"><label for="visitorResponsible">Responsável ADM</label><input class="input" id="visitorResponsible" required placeholder="Quem vai receber o visitante" /></div>
+                <div class="field"><label for="visitorCardDelivered">Cartão entregue?</label><select class="select" id="visitorCardDelivered"><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+                <div class="field"><label for="visitorCardNumber">Número do cartão</label><input class="input" id="visitorCardNumber" placeholder="Ex.: V-010" /></div>
+              </div>
+              <div class="field"><label for="visitorReason">Motivo da visita</label><textarea class="textarea" id="visitorReason" placeholder="Ex.: reunião, manutenção, entrega..."></textarea></div>
+              <button class="btn btn-primary" type="submit">Registrar entrada</button>
+            </form>
+            <div class="table-tools" style="margin-top:18px"><strong>Visitantes dentro da unidade</strong></div>
+            <div class="compact-list" id="activeVisitorsList"></div>
+          </div>
+
+          <div class="portaria-module" id="module-cards">
+            <form id="cardEventForm">
+              <div class="grid-2">
+                <div class="field"><label for="cardEventType">Tipo de ocorrência</label><select class="select" id="cardEventType"><option value="Perda de cartão">Perda de cartão</option><option value="Entrega de cartão novo">Entrega de cartão novo</option><option value="Devolução de cartão">Devolução de cartão</option><option value="Cartão danificado">Cartão danificado</option></select></div>
+                <div class="field"><label for="cardPersonName">Nome da pessoa</label><input class="input" id="cardPersonName" required placeholder="Colaborador, visitante ou terceiro" /></div>
+                <div class="field"><label for="cardOldNumber">Cartão antigo / perdido</label><input class="input" id="cardOldNumber" placeholder="Ex.: C-018" /></div>
+                <div class="field"><label for="cardNewNumber">Cartão novo entregue</label><input class="input" id="cardNewNumber" placeholder="Ex.: C-022" /></div>
+              </div>
+              <div class="field"><label for="cardEventObs">Observação</label><textarea class="textarea" id="cardEventObs" placeholder="Detalhe o ocorrido"></textarea></div>
+              <button class="btn btn-primary" type="submit">Registrar ocorrência de cartão</button>
+            </form>
+          </div>
+
+          <div class="portaria-module" id="module-lost">
+            <form id="lostFoundForm">
+              <div class="grid-2">
+                <div class="field"><label for="lostType">Tipo</label><select class="select" id="lostType"><option value="Achado">Achado</option><option value="Perdido">Perdido</option><option value="Devolvido">Devolvido</option></select></div>
+                <div class="field"><label for="lostLocation">Local</label><input class="input" id="lostLocation" placeholder="Ex.: portaria, estacionamento, recepção" /></div>
+                <div class="field"><label for="lostOwner">Pessoa relacionada</label><input class="input" id="lostOwner" placeholder="Quem perdeu/retirou, se souber" /></div>
+                <div class="field"><label for="lostStatus">Status</label><select class="select" id="lostStatus"><option value="Guardado na portaria">Guardado na portaria</option><option value="Entregue ao responsável">Entregue ao responsável</option><option value="Em apuração">Em apuração</option></select></div>
+              </div>
+              <div class="field"><label for="lostDescription">Descrição do objeto</label><textarea class="textarea" id="lostDescription" required placeholder="Ex.: crachá, chave, celular, mochila..."></textarea></div>
+              <div class="field"><label for="lostPhoto">Foto do objeto</label><input class="input" id="lostPhoto" type="file" accept="image/*" capture="environment" onchange="handleLostFoundPhoto(event)" /><div class="mini-preview" id="lostPhotoPreview">📷 Foto opcional do objeto</div></div>
+              <button class="btn btn-primary" type="submit">Registrar achado/perdido</button>
+            </form>
+          </div>
+
+          <div class="portaria-module" id="module-incidents">
+            <form id="securityIncidentForm">
+              <div class="grid-2">
+                <div class="field"><label for="incidentType">Tipo de desvio</label><select class="select" id="incidentType"><option value="Conduta inadequada">Conduta inadequada</option><option value="Acesso não autorizado">Acesso não autorizado</option><option value="Conflito verbal">Conflito verbal</option><option value="Dano patrimonial">Dano patrimonial</option><option value="Procedimento descumprido">Procedimento descumprido</option><option value="Outro">Outro</option></select></div>
+                <div class="field"><label for="incidentSeverity">Gravidade</label><select class="select" id="incidentSeverity"><option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option><option value="Crítica">Crítica</option></select></div>
+                <div class="field"><label for="incidentPerson">Pessoa/envolvido</label><input class="input" id="incidentPerson" placeholder="Ex.: motorista, visitante, terceiro..." /></div>
+                <div class="field"><label for="incidentArea">Local / área</label><input class="input" id="incidentArea" placeholder="Ex.: portaria, balança, estacionamento..." /></div>
+              </div>
+              <div class="field"><label for="incidentDescription">Descrição do ocorrido</label><textarea class="textarea" id="incidentDescription" required placeholder="Descreva com clareza o que aconteceu"></textarea></div>
+              <div class="field"><label for="incidentAction">Ação tomada</label><textarea class="textarea" id="incidentAction" placeholder="Ex.: orientado, bloqueado acesso, comunicado gestor..."></textarea></div>
+              <div class="field"><label for="incidentPhoto">Foto/evidência</label><input class="input" id="incidentPhoto" type="file" accept="image/*" capture="environment" onchange="handleIncidentPhoto(event)" /><div class="mini-preview" id="incidentPhotoPreview">📷 Foto opcional da evidência</div></div>
+              <button class="btn btn-primary" type="submit">Registrar desvio / ocorrência</button>
+            </form>
+          </div>
+
+          <div class="portaria-module" id="module-notes">
+            <form id="gateNoteForm">
+              <div class="grid-2">
+                <div class="field"><label for="gateShift">Turno</label><select class="select" id="gateShift"><option value="Diurno">Diurno</option><option value="Noturno">Noturno</option><option value="Troca de turno">Troca de turno</option></select></div>
+                <div class="field"><label for="gateNoteType">Tipo</label><select class="select" id="gateNoteType"><option value="Observação de plantão">Observação de plantão</option><option value="Recado para próximo turno">Recado para próximo turno</option><option value="Orientação recebida">Orientação recebida</option><option value="Anormalidade operacional">Anormalidade operacional</option></select></div>
+              </div>
+              <div class="field"><label for="gateNoteText">Registro</label><textarea class="textarea" id="gateNoteText" required placeholder="Descreva a informação importante para o controle da portaria"></textarea></div>
+              <button class="btn btn-primary" type="submit">Registrar no livro da portaria</button>
+            </form>
           </div>
         </div>
 
@@ -2189,11 +2373,20 @@
     let vehicles = [];
     let managers = [];
     let pendingUsers = [];
+    let visitors = [];
+    let cardEvents = [];
+    let lostFound = [];
+    let securityIncidents = [];
+    let gateNotes = [];
     let selectedChecklistId = null;
     let checklistPhotoData = "";
     let signatureData = "";
     let signatureDirty = false;
     let returnPhotoData = "";
+    let lostFoundPhotoData = "";
+    let incidentPhotoData = "";
+    let portariaModule = "visitors";
+    let traceTab = "visitors";
     let managerFilter = "Todos";
     let adminFilter = "Todos";
     let lastApprovedIdsForSound = new Set();
@@ -2237,6 +2430,11 @@
       document.getElementById("managerForm").addEventListener("submit", createManager);
       document.getElementById("adminUserForm").addEventListener("submit", createAdminUser);
       document.getElementById("userRequestForm").addEventListener("submit", submitUserRequest);
+      document.getElementById("visitorForm").addEventListener("submit", createVisitorEntry);
+      document.getElementById("cardEventForm").addEventListener("submit", createCardEvent);
+      document.getElementById("lostFoundForm").addEventListener("submit", createLostFound);
+      document.getElementById("securityIncidentForm").addEventListener("submit", createSecurityIncident);
+      document.getElementById("gateNoteForm").addEventListener("submit", createGateNote);
       setupSignaturePad();
       window.addEventListener("resize", resizeSignatureCanvas);
     }
@@ -2256,6 +2454,11 @@
       vehicles = JSON.parse(localStorage.getItem("adm_vehicles") || "null") || seedVehicles;
       managers = JSON.parse(localStorage.getItem("adm_managers") || "null") || seedManagers;
       pendingUsers = JSON.parse(localStorage.getItem("adm_pending_users") || "[]");
+      visitors = JSON.parse(localStorage.getItem("adm_visitors") || "[]");
+      cardEvents = JSON.parse(localStorage.getItem("adm_card_events") || "[]");
+      lostFound = JSON.parse(localStorage.getItem("adm_lost_found") || "[]");
+      securityIncidents = JSON.parse(localStorage.getItem("adm_security_incidents") || "[]");
+      gateNotes = JSON.parse(localStorage.getItem("adm_gate_notes") || "[]");
       reservations = JSON.parse(localStorage.getItem("adm_reservations") || "[]");
 
       // MIGRAÇÃO LOCAL:
@@ -2356,22 +2559,37 @@
 
     async function loadFromSupabase() {
       try {
-        const [vehiclesRes, managersRes, reservationsRes, pendingUsersRes] = await Promise.all([
+        const [vehiclesRes, managersRes, reservationsRes, pendingUsersRes, visitorsRes, cardEventsRes, lostFoundRes, securityIncidentsRes, gateNotesRes] = await Promise.all([
           supabaseClient.from("vehicles").select("*").order("placa"),
           supabaseClient.from("managers").select("*").order("nome"),
           supabaseClient.from("reservations").select("*").order("created_at", { ascending: false }),
-          supabaseClient.from("pending_users").select("*").order("created_at", { ascending: false })
+          supabaseClient.from("pending_users").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("visitor_logs").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("card_events").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("lost_found").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("security_incidents").select("*").order("created_at", { ascending: false }),
+          supabaseClient.from("gate_notes").select("*").order("created_at", { ascending: false })
         ]);
 
         if (vehiclesRes.error) throw vehiclesRes.error;
         if (managersRes.error) throw managersRes.error;
         if (reservationsRes.error) throw reservationsRes.error;
         if (pendingUsersRes.error) console.warn("Tabela pending_users ainda não criada:", pendingUsersRes.error);
+        if (visitorsRes.error) console.warn("Tabela visitor_logs ainda não criada:", visitorsRes.error);
+        if (cardEventsRes.error) console.warn("Tabela card_events ainda não criada:", cardEventsRes.error);
+        if (lostFoundRes.error) console.warn("Tabela lost_found ainda não criada:", lostFoundRes.error);
+        if (securityIncidentsRes.error) console.warn("Tabela security_incidents ainda não criada:", securityIncidentsRes.error);
+        if (gateNotesRes.error) console.warn("Tabela gate_notes ainda não criada:", gateNotesRes.error);
 
         vehicles = vehiclesRes.data || [];
         managers = managersRes.data || [];
         reservations = reservationsRes.data || [];
         pendingUsers = pendingUsersRes.data || [];
+        visitors = visitorsRes.data || [];
+        cardEvents = cardEventsRes.data || [];
+        lostFound = lostFoundRes.data || [];
+        securityIncidents = securityIncidentsRes.data || [];
+        gateNotes = gateNotesRes.data || [];
       } catch (err) {
         console.error(err);
         toast("Erro ao carregar dados do Supabase.");
@@ -2402,6 +2620,32 @@
       reservations = reservations.map(r => r.id === id ? { ...r, ...patch } : r);
       localStorage.setItem("adm_reservations", JSON.stringify(reservations));
       renderEverything();
+    }
+
+
+    async function insertPortariaRecord(table, localKey, listName, record) {
+      if (USE_SUPABASE) {
+        const { data, error } = await supabaseClient.from(table).insert(record).select().single();
+        if (error) throw error;
+        window[listName].unshift(data);
+        return data;
+      }
+
+      window[listName].unshift(record);
+      localStorage.setItem(localKey, JSON.stringify(window[listName]));
+      return record;
+    }
+
+    async function updatePortariaRecord(table, localKey, listName, id, patch) {
+      if (USE_SUPABASE) {
+        const { error } = await supabaseClient.from(table).update(patch).eq("id", id);
+        if (error) throw error;
+        await loadAll();
+        return;
+      }
+
+      window[listName] = window[listName].map(item => item.id === id ? { ...item, ...patch } : item);
+      localStorage.setItem(localKey, JSON.stringify(window[listName]));
     }
 
     function normalizeForSupabase(record) {
@@ -2455,6 +2699,8 @@
       renderPendingUsers();
       renderAdminReservations();
       renderAdminVehicles();
+      renderActiveVisitors();
+      renderAdminTrace();
       checkVehicleAvailability();
       checkGateAlerts();
       fillSelects();
@@ -2465,6 +2711,11 @@
       localStorage.removeItem("adm_vehicles");
       localStorage.removeItem("adm_managers");
       localStorage.removeItem("adm_reservations");
+      localStorage.removeItem("adm_visitors");
+      localStorage.removeItem("adm_card_events");
+      localStorage.removeItem("adm_lost_found");
+      localStorage.removeItem("adm_security_incidents");
+      localStorage.removeItem("adm_gate_notes");
       localStorage.removeItem("adm_current_user");
       currentUser = null;
       loadAll();
@@ -3051,6 +3302,345 @@
       toast("Retorno registrado com checklist e reserva finalizada.");
     }
 
+
+
+
+    function setPortariaModule(module) {
+      portariaModule = module;
+      document.querySelectorAll("[data-portaria-tab]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.portariaTab === module);
+      });
+      document.querySelectorAll(".portaria-module").forEach(box => box.classList.remove("active"));
+      document.getElementById(`module-${module}`)?.classList.add("active");
+    }
+
+    async function createVisitorEntry(event) {
+      event.preventDefault();
+      if (!requireRole("portaria")) return;
+
+      const cardDelivered = document.getElementById("visitorCardDelivered").value;
+      const cardNumber = document.getElementById("visitorCardNumber").value.trim();
+
+      if (cardDelivered === "Sim" && !cardNumber) {
+        toast("Informe o número do cartão entregue ao visitante.");
+        return;
+      }
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        visitor_name: document.getElementById("visitorName").value.trim(),
+        visitor_document: document.getElementById("visitorDocument").value.trim(),
+        company: document.getElementById("visitorCompany").value.trim(),
+        responsible: document.getElementById("visitorResponsible").value.trim(),
+        reason: document.getElementById("visitorReason").value.trim(),
+        card_delivered: cardDelivered,
+        card_number: cardNumber,
+        entry_time: new Date().toISOString(),
+        exit_time: null,
+        status: "Dentro da unidade",
+        created_by: currentUser.nome,
+        created_by_id: currentUser.id,
+        created_by_usuario: currentUser.usuario
+      };
+
+      try {
+        await insertPortariaRecord("visitor_logs", "adm_visitors", "visitors", record);
+        document.getElementById("visitorForm").reset();
+        renderActiveVisitors();
+        renderAdminTrace();
+        toast("Entrada de visitante registrada.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar visitante.");
+      }
+    }
+
+    async function closeVisitorExit(id) {
+      if (!requireRole("portaria")) return;
+      const v = visitors.find(item => item.id === id);
+      if (!v) return;
+      const ok = confirm(`Registrar saída do visitante ${v.visitor_name}?`);
+      if (!ok) return;
+
+      try {
+        await updatePortariaRecord("visitor_logs", "adm_visitors", "visitors", id, {
+          exit_time: new Date().toISOString(),
+          status: "Saiu da unidade",
+          exit_by: currentUser.nome,
+          exit_by_id: currentUser.id,
+          exit_by_usuario: currentUser.usuario
+        });
+        renderActiveVisitors();
+        renderAdminTrace();
+        toast("Saída do visitante registrada.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar saída.");
+      }
+    }
+
+    function renderActiveVisitors() {
+      const box = document.getElementById("activeVisitorsList");
+      if (!box) return;
+
+      const active = visitors.filter(v => !v.exit_time && v.status !== "Saiu da unidade");
+
+      box.innerHTML = active.length ? active.map(v => `
+        <div class="compact-card">
+          <div>
+            <strong>${escapeHtml(v.visitor_name || "-")}</strong>
+            <small>
+              Entrada: ${formatDate(v.entry_time)}<br>
+              Empresa: ${escapeHtml(v.company || "-")} • Responsável: ${escapeHtml(v.responsible || "-")}<br>
+              Cartão: ${escapeHtml(v.card_delivered || "Não")} ${v.card_number ? "• " + escapeHtml(v.card_number) : ""}
+            </small>
+          </div>
+          <button class="mini-btn green" onclick="closeVisitorExit('${v.id}')">Registrar saída</button>
+        </div>
+      `).join("") : `<div class="empty">Nenhum visitante dentro da unidade.</div>`;
+    }
+
+    async function createCardEvent(event) {
+      event.preventDefault();
+      if (!requireRole("portaria")) return;
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        event_type: document.getElementById("cardEventType").value,
+        person_name: document.getElementById("cardPersonName").value.trim(),
+        old_card_number: document.getElementById("cardOldNumber").value.trim(),
+        new_card_number: document.getElementById("cardNewNumber").value.trim(),
+        observation: document.getElementById("cardEventObs").value.trim(),
+        created_by: currentUser.nome,
+        created_by_id: currentUser.id,
+        created_by_usuario: currentUser.usuario
+      };
+
+      try {
+        await insertPortariaRecord("card_events", "adm_card_events", "cardEvents", record);
+        document.getElementById("cardEventForm").reset();
+        renderAdminTrace();
+        toast("Ocorrência de cartão registrada.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar ocorrência de cartão.");
+      }
+    }
+
+    function handleLostFoundPhoto(event) {
+      readImageToDataUrl(event, "lostPhotoPreview", value => lostFoundPhotoData = value, "📷 Foto opcional do objeto");
+    }
+
+    function handleIncidentPhoto(event) {
+      readImageToDataUrl(event, "incidentPhotoPreview", value => incidentPhotoData = value, "📷 Foto opcional da evidência");
+    }
+
+    function readImageToDataUrl(event, previewId, setter, emptyText) {
+      const file = event.target.files && event.target.files[0];
+      const preview = document.getElementById(previewId);
+
+      if (!file) {
+        setter("");
+        preview.innerHTML = emptyText;
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast("Selecione uma imagem.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setter(reader.result);
+        preview.innerHTML = `<img src="${reader.result}" alt="Imagem registrada">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function createLostFound(event) {
+      event.preventDefault();
+      if (!requireRole("portaria")) return;
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        record_type: document.getElementById("lostType").value,
+        location: document.getElementById("lostLocation").value.trim(),
+        related_person: document.getElementById("lostOwner").value.trim(),
+        status: document.getElementById("lostStatus").value,
+        description: document.getElementById("lostDescription").value.trim(),
+        photo: lostFoundPhotoData || null,
+        created_by: currentUser.nome,
+        created_by_id: currentUser.id,
+        created_by_usuario: currentUser.usuario
+      };
+
+      try {
+        await insertPortariaRecord("lost_found", "adm_lost_found", "lostFound", record);
+        document.getElementById("lostFoundForm").reset();
+        document.getElementById("lostPhotoPreview").innerHTML = "📷 Foto opcional do objeto";
+        lostFoundPhotoData = "";
+        renderAdminTrace();
+        toast("Achado/perdido registrado.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar achado/perdido.");
+      }
+    }
+
+    async function createSecurityIncident(event) {
+      event.preventDefault();
+      if (!requireRole("portaria")) return;
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        incident_type: document.getElementById("incidentType").value,
+        severity: document.getElementById("incidentSeverity").value,
+        person_involved: document.getElementById("incidentPerson").value.trim(),
+        area: document.getElementById("incidentArea").value.trim(),
+        description: document.getElementById("incidentDescription").value.trim(),
+        action_taken: document.getElementById("incidentAction").value.trim(),
+        photo: incidentPhotoData || null,
+        status: "Registrado",
+        created_by: currentUser.nome,
+        created_by_id: currentUser.id,
+        created_by_usuario: currentUser.usuario
+      };
+
+      try {
+        await insertPortariaRecord("security_incidents", "adm_security_incidents", "securityIncidents", record);
+        document.getElementById("securityIncidentForm").reset();
+        document.getElementById("incidentPhotoPreview").innerHTML = "📷 Foto opcional da evidência";
+        incidentPhotoData = "";
+        renderAdminTrace();
+        toast("Desvio/ocorrência registrado.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar desvio/ocorrência.");
+      }
+    }
+
+    async function createGateNote(event) {
+      event.preventDefault();
+      if (!requireRole("portaria")) return;
+
+      const record = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        shift: document.getElementById("gateShift").value,
+        note_type: document.getElementById("gateNoteType").value,
+        note: document.getElementById("gateNoteText").value.trim(),
+        created_by: currentUser.nome,
+        created_by_id: currentUser.id,
+        created_by_usuario: currentUser.usuario
+      };
+
+      try {
+        await insertPortariaRecord("gate_notes", "adm_gate_notes", "gateNotes", record);
+        document.getElementById("gateNoteForm").reset();
+        renderAdminTrace();
+        toast("Registro incluído no livro da portaria.");
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao registrar livro da portaria.");
+      }
+    }
+
+    function setTraceTab(tab) {
+      traceTab = tab;
+      renderAdminTrace();
+    }
+
+    function renderAdminTrace() {
+      const head = document.getElementById("traceHead");
+      const body = document.getElementById("traceBody");
+      const title = document.getElementById("traceTitle");
+      if (!head || !body || !title) return;
+
+      document.querySelectorAll("[data-trace-tab]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.traceTab === traceTab);
+      });
+
+      const q = (document.getElementById("traceSearch")?.value || "").toLowerCase();
+      const match = row => Object.values(row || {}).join(" ").toLowerCase().includes(q);
+
+      if (traceTab === "visitors") {
+        title.textContent = "Visitantes";
+        const rows = visitors.filter(match);
+        head.innerHTML = `<tr><th>Entrada</th><th>Visitante</th><th>Empresa</th><th>Responsável</th><th>Cartão</th><th>Saída</th><th>Agente</th></tr>`;
+        body.innerHTML = rows.length ? rows.map(v => `<tr>
+          <td>${formatDate(v.entry_time)}</td>
+          <td><strong>${escapeHtml(v.visitor_name || "-")}</strong></td>
+          <td>${escapeHtml(v.company || "-")}</td>
+          <td>${escapeHtml(v.responsible || "-")}</td>
+          <td>${escapeHtml(v.card_delivered || "-")} ${v.card_number ? "• " + escapeHtml(v.card_number) : ""}</td>
+          <td>${v.exit_time ? formatDate(v.exit_time) : '<span class="badge warning">Dentro</span>'}</td>
+          <td>${escapeHtml(v.created_by || "-")}</td>
+        </tr>`).join("") : `<tr><td colspan="7"><div class="empty">Nenhum visitante registrado.</div></td></tr>`;
+        return;
+      }
+
+      if (traceTab === "cards") {
+        title.textContent = "Cartões";
+        const rows = cardEvents.filter(match);
+        head.innerHTML = `<tr><th>Data</th><th>Tipo</th><th>Pessoa</th><th>Cartão antigo</th><th>Cartão novo</th><th>Obs.</th><th>Agente</th></tr>`;
+        body.innerHTML = rows.length ? rows.map(c => `<tr>
+          <td>${formatDate(c.created_at)}</td><td>${escapeHtml(c.event_type || "-")}</td><td><strong>${escapeHtml(c.person_name || "-")}</strong></td>
+          <td>${escapeHtml(c.old_card_number || "-")}</td><td>${escapeHtml(c.new_card_number || "-")}</td><td>${escapeHtml(c.observation || "-")}</td><td>${escapeHtml(c.created_by || "-")}</td>
+        </tr>`).join("") : `<tr><td colspan="7"><div class="empty">Nenhuma ocorrência de cartão.</div></td></tr>`;
+        return;
+      }
+
+      if (traceTab === "lost") {
+        title.textContent = "Achados e perdidos";
+        const rows = lostFound.filter(match);
+        head.innerHTML = `<tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Local</th><th>Status</th><th>Pessoa</th><th>Foto</th><th>Agente</th></tr>`;
+        body.innerHTML = rows.length ? rows.map(l => `<tr>
+          <td>${formatDate(l.created_at)}</td><td>${escapeHtml(l.record_type || "-")}</td><td><strong>${escapeHtml(l.description || "-")}</strong></td>
+          <td>${escapeHtml(l.location || "-")}</td><td>${escapeHtml(l.status || "-")}</td><td>${escapeHtml(l.related_person || "-")}</td>
+          <td>${l.photo ? `<button class="mini-btn" onclick="openImagePreview('${l.id}', 'lost')">Ver</button>` : "-"}</td><td>${escapeHtml(l.created_by || "-")}</td>
+        </tr>`).join("") : `<tr><td colspan="8"><div class="empty">Nenhum achado/perdido registrado.</div></td></tr>`;
+        return;
+      }
+
+      if (traceTab === "incidents") {
+        title.textContent = "Desvios / ocorrências";
+        const rows = securityIncidents.filter(match);
+        head.innerHTML = `<tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Envolvido</th><th>Descrição</th><th>Ação</th><th>Foto</th><th>Agente</th></tr>`;
+        body.innerHTML = rows.length ? rows.map(i => `<tr>
+          <td>${formatDate(i.created_at)}</td><td>${escapeHtml(i.incident_type || "-")}</td><td>${escapeHtml(i.severity || "-")}</td>
+          <td>${escapeHtml(i.person_involved || "-")}</td><td><strong>${escapeHtml(i.description || "-")}</strong></td><td>${escapeHtml(i.action_taken || "-")}</td>
+          <td>${i.photo ? `<button class="mini-btn" onclick="openImagePreview('${i.id}', 'incident')">Ver</button>` : "-"}</td><td>${escapeHtml(i.created_by || "-")}</td>
+        </tr>`).join("") : `<tr><td colspan="8"><div class="empty">Nenhum desvio/ocorrência registrado.</div></td></tr>`;
+        return;
+      }
+
+      title.textContent = "Livro da portaria";
+      const rows = gateNotes.filter(match);
+      head.innerHTML = `<tr><th>Data</th><th>Turno</th><th>Tipo</th><th>Registro</th><th>Agente</th></tr>`;
+      body.innerHTML = rows.length ? rows.map(n => `<tr>
+        <td>${formatDate(n.created_at)}</td><td>${escapeHtml(n.shift || "-")}</td><td>${escapeHtml(n.note_type || "-")}</td>
+        <td><strong>${escapeHtml(n.note || "-")}</strong></td><td>${escapeHtml(n.created_by || "-")}</td>
+      </tr>`).join("") : `<tr><td colspan="5"><div class="empty">Nenhum registro no livro da portaria.</div></td></tr>`;
+    }
+
+    function openImagePreview(id, type) {
+      if (!requireAdmin()) return;
+      const item = type === "lost" ? lostFound.find(x => x.id === id) : securityIncidents.find(x => x.id === id);
+      const src = item?.photo;
+      if (!src) {
+        toast("Sem imagem registrada.");
+        return;
+      }
+      const body = document.getElementById("detailsBody");
+      body.innerHTML = `<div class="media-card"><h4>Imagem registrada</h4><img src="${src}" alt="Imagem registrada"></div>`;
+      document.getElementById("detailsModal").classList.add("active");
+    }
 
 
     function openAdminPanel() {
